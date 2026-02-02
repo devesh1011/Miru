@@ -6,7 +6,6 @@
 module deepmirror::mirror {
     use sui::event;
     use sui::clock::Clock;
-    use sui::tx_context::TxContext;
 
     // ======== Error Codes ========
     
@@ -14,8 +13,10 @@ module deepmirror::mirror {
     const E_NOT_OWNER: u64 = 2;
     const E_POSITION_HAS_ORDERS: u64 = 3;
     const E_ORDER_NOT_FOUND: u64 = 4;
+    #[allow(unused_const)]
     const E_INVALID_POOL: u64 = 5;
     const E_PAUSED: u64 = 6;
+    #[allow(unused_const)]
     const E_NOT_ADMIN: u64 = 7;
     
     // ======== Constants ========
@@ -127,7 +128,7 @@ module deepmirror::mirror {
     // ======== Initialization ========
 
     /// Initialize the module - creates admin cap and protocol config
-    fun init(ctx: &mut TxContext) {
+    fun init(ctx: &mut tx_context::TxContext) {
         // Create admin capability
         let admin_cap = AdminCap {
             id: object::new(ctx),
@@ -166,7 +167,7 @@ module deepmirror::mirror {
         ratio: u64,
         pool_id: ID,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut tx_context::TxContext,
     ): MirrorPosition {
         // Check protocol not paused
         assert!(!config.paused, E_PAUSED);
@@ -218,7 +219,7 @@ module deepmirror::mirror {
         position: &mut MirrorPosition,
         new_ratio: u64,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut tx_context::TxContext,
     ) {
         assert!(ctx.sender() == position.owner, E_NOT_OWNER);
         assert!(new_ratio >= MIN_RATIO && new_ratio <= MAX_RATIO, E_INVALID_RATIO);
@@ -246,7 +247,7 @@ module deepmirror::mirror {
     public fun toggle_active(
         position: &mut MirrorPosition,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut tx_context::TxContext,
     ) {
         assert!(ctx.sender() == position.owner, E_NOT_OWNER);
         
@@ -277,7 +278,7 @@ module deepmirror::mirror {
         position: &mut MirrorPosition,
         order_id: u128,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut tx_context::TxContext,
     ) {
         assert!(ctx.sender() == position.owner, E_NOT_OWNER);
         assert!(!config.paused, E_PAUSED);
@@ -309,7 +310,7 @@ module deepmirror::mirror {
         position: &mut MirrorPosition,
         order_id: u128,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut tx_context::TxContext,
     ) {
         assert!(ctx.sender() == position.owner, E_NOT_OWNER);
         
@@ -337,7 +338,7 @@ module deepmirror::mirror {
     public fun clear_orders(
         position: &mut MirrorPosition,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut tx_context::TxContext,
     ) {
         assert!(ctx.sender() == position.owner, E_NOT_OWNER);
         
@@ -356,7 +357,7 @@ module deepmirror::mirror {
     public fun close_position(
         position: MirrorPosition,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut tx_context::TxContext,
     ) {
         assert!(ctx.sender() == position.owner, E_NOT_OWNER);
         assert!(position.active_orders.is_empty(), E_POSITION_HAS_ORDERS);
@@ -474,7 +475,7 @@ module deepmirror::mirror {
     // ======== Test-only Functions ========
     
     #[test_only]
-    public fun init_for_testing(ctx: &mut TxContext) {
+    public fun init_for_testing(ctx: &mut tx_context::TxContext) {
         init(ctx);
     }
 }
