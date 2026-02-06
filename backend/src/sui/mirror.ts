@@ -52,9 +52,10 @@ export class MirrorContractService {
     // Find the created MirrorPosition object from objectTypes
     const objectTypes = txResult.objectTypes ?? {};
     const effects = txResult.effects;
-    const createdObjects = effects?.changedObjects?.filter(
-      (obj: any) => obj.idOperation === "Created",
-    ) || [];
+    const createdObjects =
+      effects?.changedObjects?.filter(
+        (obj: any) => obj.idOperation === "Created",
+      ) || [];
 
     const positionObj = createdObjects.find((obj: any) => {
       const objType = objectTypes[obj.objectId];
@@ -174,6 +175,129 @@ export class MirrorContractService {
     return suiService.executeTransaction(tx);
   }
 
+  // ======== Capability-based Operations (Backend as Operator) ========
+
+  /**
+   * Record an order using a MirrorCapability (non-custodial).
+   * Called by the backend using its own keypair as the authorized operator.
+   */
+  async recordOrderWithCapability(
+    capabilityId: string,
+    positionId: string,
+    orderId: string,
+  ): Promise<string> {
+    const tx = new Transaction();
+    const clockId = "0x6";
+
+    tx.moveCall({
+      target: `${this.packageId}::mirror::record_order_with_capability`,
+      arguments: [
+        tx.object(capabilityId),
+        tx.object(this.protocolConfigId),
+        tx.object(positionId),
+        tx.pure.u128(orderId),
+        tx.object(clockId),
+      ],
+    });
+
+    return suiService.executeTransaction(tx);
+  }
+
+  /**
+   * Remove an order using a MirrorCapability (non-custodial).
+   */
+  async removeOrderWithCapability(
+    capabilityId: string,
+    positionId: string,
+    orderId: string,
+  ): Promise<string> {
+    const tx = new Transaction();
+    const clockId = "0x6";
+
+    tx.moveCall({
+      target: `${this.packageId}::mirror::remove_order_with_capability`,
+      arguments: [
+        tx.object(capabilityId),
+        tx.object(positionId),
+        tx.pure.u128(orderId),
+        tx.object(clockId),
+      ],
+    });
+
+    return suiService.executeTransaction(tx);
+  }
+
+  /**
+   * Clear all orders using a MirrorCapability (non-custodial).
+   */
+  async clearOrdersWithCapability(
+    capabilityId: string,
+    positionId: string,
+  ): Promise<string> {
+    const tx = new Transaction();
+    const clockId = "0x6";
+
+    tx.moveCall({
+      target: `${this.packageId}::mirror::clear_orders_with_capability`,
+      arguments: [
+        tx.object(capabilityId),
+        tx.object(positionId),
+        tx.object(clockId),
+      ],
+    });
+
+    return suiService.executeTransaction(tx);
+  }
+
+  /**
+   * Get a capability by object ID
+   */
+  async getCapability(
+    capabilityId: string,
+  ): Promise<MirrorCapabilityData | null> {
+    try {
+      const result = await suiService.getObject(capabilityId);
+      const fields = result.object?.json as any;
+
+      if (!fields) return null;
+
+      return {
+        id: capabilityId,
+        positionId: fields.position_id,
+        authorizedOperator: fields.authorized_operator,
+        maxOrderSize: parseInt(fields.max_order_size),
+        expiresAt: parseInt(fields.expires_at),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * List all MirrorCapability objects owned by the backend operator
+   */
+  async getOperatorCapabilities(): Promise<MirrorCapabilityData[]> {
+    const capType = `${this.packageId}::mirror::MirrorCapability`;
+    const operatorAddress = suiService.getAddress();
+    const result = await suiService.listOwnedObjects(operatorAddress, capType);
+
+    const caps: MirrorCapabilityData[] = [];
+    for (const obj of result.objects || []) {
+      const fields = obj.json as any;
+      if (fields) {
+        caps.push({
+          id: obj.objectId,
+          positionId: fields.position_id,
+          authorizedOperator: fields.authorized_operator,
+          maxOrderSize: parseInt(fields.max_order_size),
+          expiresAt: parseInt(fields.expires_at),
+        });
+      }
+    }
+
+    return caps;
+  }
+
   /**
    * Get position details from on-chain state
    * Uses new @mysten/sui@2.3.0 API:
@@ -277,6 +401,14 @@ export interface MirrorPositionData {
   createdAt: number;
   updatedAt: number;
   active: boolean;
+}
+
+export interface MirrorCapabilityData {
+  id: string;
+  positionId: string;
+  authorizedOperator: string;
+  maxOrderSize: number;
+  expiresAt: number;
 }
 
 export interface ProtocolConfigData {

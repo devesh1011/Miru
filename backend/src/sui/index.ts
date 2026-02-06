@@ -15,5 +15,6 @@ export {
   MirrorContractService,
   mirrorContractService,
   type MirrorPositionData,
+  type MirrorCapabilityData,
   type ProtocolConfigData,
 } from "./mirror.js";
