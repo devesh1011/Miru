@@ -38,6 +38,18 @@ export {
   type MakerProfile,
 } from "./discover.js";
 
+// zkLogin - Non-custodial wallet management
+export {
+  ZkLoginService,
+  zkLoginService,
+  type ZkLoginSession,
+  type ZkLoginAuth,
+  type PartialZkLoginSignature,
+} from "./zklogin.js";
+
+// Transaction Builder - Builds unsigned PTBs for zkLogin users
+export { TxBuilderService, txBuilderService } from "./tx-builder.js";
+
 // Import singletons for use in functions below
 import { mirrorEngine as _mirrorEngine } from "./mirror-engine.js";
 import { eventMonitor as _eventMonitor } from "./event-monitor.js";

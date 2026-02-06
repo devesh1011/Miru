@@ -1,6 +1,7 @@
 import { suiService } from "../sui/client.js";
 import { mirrorEngine, MakerOrderEvent } from "./mirror-engine.js";
 import { config } from "../config/index.js";
+import { extractErrorMessage, isRetryableError } from "../utils/errors.js";
 
 /**
  * DeepBook order event types
@@ -44,8 +45,8 @@ export class EventMonitorService {
   private lastCursor: Map<string, string> = new Map();
   private subscriptions: Map<string, PoolSubscription> = new Map();
 
-  // Poll interval in milliseconds
-  private readonly POLL_INTERVAL_MS = 2000;
+  // Poll interval in milliseconds (increased to reduce RPC load)
+  private readonly POLL_INTERVAL_MS = 10000; // 10 seconds
 
   constructor() {}
 
@@ -123,7 +124,14 @@ export class EventMonitorService {
       try {
         await this.pollEvents();
       } catch (error) {
-        console.error("Error polling events:", error);
+        const errMsg = extractErrorMessage(error);
+        if (isRetryableError(error)) {
+          console.warn(
+            `Event polling encountered transient error (will retry): ${errMsg}`,
+          );
+        } else {
+          console.error("Error polling events:", errMsg);
+        }
       }
     }, this.POLL_INTERVAL_MS);
   }
@@ -138,7 +146,14 @@ export class EventMonitorService {
       try {
         await this.pollPoolEvents(subscription);
       } catch (error) {
-        console.error(`Error polling events for ${poolKey}:`, error);
+        const errMsg = extractErrorMessage(error);
+        if (isRetryableError(error)) {
+          console.warn(
+            `Pool ${poolKey} polling timeout (will retry next cycle): ${errMsg}`,
+          );
+        } else {
+          console.error(`Error polling events for ${poolKey}:`, errMsg);
+        }
       }
     }
   }
@@ -151,8 +166,8 @@ export class EventMonitorService {
     // Event type for order placed in DeepBook V3
     const eventType = `${config.sui.deepBookPackageId}::deepbook::OrderPlaced`;
 
-    // queryEvents takes (eventType, limit) - limit defaults to 100
-    const events = await suiService.queryEvents(eventType);
+    // queryEvents takes (eventType, limit) - limit to 50 to reduce load
+    const events = await suiService.queryEvents(eventType, 50);
 
     if (events.data.length === 0) return;
 
@@ -205,7 +220,8 @@ export class EventMonitorService {
       // Route to mirror engine
       await mirrorEngine.processMakerOrder(makerOrderEvent);
     } catch (error) {
-      console.error("Error processing event:", error);
+      const errMsg = extractErrorMessage(error);
+      console.error("Error processing event:", errMsg);
     }
   }
 
@@ -233,7 +249,8 @@ export class EventMonitorService {
         parsedEvent.orderId,
       );
     } catch (error) {
-      console.error("Error processing cancellation:", error);
+      const errMsg = extractErrorMessage(error);
+      console.error("Error processing cancellation:", errMsg);
     }
   }
 

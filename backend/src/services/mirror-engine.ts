@@ -1,6 +1,11 @@
 import { suiService } from "../sui/client.js";
 import { deepBookService } from "../sui/deepbook.js";
 import { mirrorContractService } from "../sui/mirror.js";
+import {
+  extractErrorMessage,
+  isRetryableError,
+  withRetry,
+} from "../utils/errors.js";
 
 /**
  * Maker order detected from DeepBook events
@@ -26,6 +31,8 @@ export interface TrackedPosition {
   ratio: number;
   active: boolean;
   balanceManagerKey: string;
+  /** Non-custodial: on-chain MirrorCapability ID for delegated order recording */
+  capabilityId?: string;
 }
 
 /**
@@ -146,6 +153,17 @@ export class MirrorEngine {
   }
 
   /**
+   * Find a tracked position by ID across all makers
+   */
+  findTrackedPosition(positionId: string): TrackedPosition | undefined {
+    for (const positions of this.trackedPositions.values()) {
+      const found = positions.find((p) => p.positionId === positionId);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
+  /**
    * Process a maker order event and execute mirrors
    * Called when we detect a new order from a tracked maker
    */
@@ -219,28 +237,85 @@ export class MirrorEngine {
     // Calculate mirrored quantity based on ratio
     const mirroredQuantity = (makerOrder.quantity * position.ratio) / 100;
 
+    if (mirroredQuantity <= 0) {
+      return {
+        positionId: position.positionId,
+        makerOrderId: makerOrder.orderId,
+        mirroredOrderId: "",
+        price: makerOrder.price,
+        quantity: 0,
+        isBid: makerOrder.isBid,
+        txDigest: "",
+        success: false,
+        error: "Calculated mirror quantity is zero or negative",
+      };
+    }
+
     console.log(
       `   Mirroring: ${mirroredQuantity} (${position.ratio}% of ${makerOrder.quantity})`,
     );
 
-    // Place the mirrored order via DeepBook SDK
-    const txDigest = await deepBookService.placeLimitOrder({
-      poolKey: position.poolKey,
-      managerKey: position.balanceManagerKey,
-      price: makerOrder.price,
-      quantity: mirroredQuantity,
-      isBid: makerOrder.isBid,
-      clientOrderId: Date.now().toString(),
-    });
+    // Place the mirrored order via DeepBook SDK (with retry for transient failures)
+    let txDigest: string;
+    try {
+      txDigest = await withRetry(
+        () =>
+          deepBookService.placeLimitOrder({
+            poolKey: position.poolKey,
+            managerKey: position.balanceManagerKey,
+            price: makerOrder.price,
+            quantity: mirroredQuantity,
+            isBid: makerOrder.isBid,
+            clientOrderId: Date.now().toString(),
+          }),
+        {
+          maxRetries: 2,
+          baseDelayMs: 1500,
+          label: `Mirror order for ${position.positionId}`,
+        },
+      );
+    } catch (orderError) {
+      const errMsg = extractErrorMessage(orderError);
+      console.error(`   Failed to place mirror order: ${errMsg}`);
+
+      // Detect specific failures
+      if (/insufficient|balance|gas/i.test(errMsg)) {
+        console.error(
+          `   ⚠️ Insufficient balance — consider pausing position ${position.positionId}`,
+        );
+      }
+
+      return {
+        positionId: position.positionId,
+        makerOrderId: makerOrder.orderId,
+        mirroredOrderId: "",
+        price: makerOrder.price,
+        quantity: mirroredQuantity,
+        isBid: makerOrder.isBid,
+        txDigest: "",
+        success: false,
+        error: errMsg,
+      };
+    }
 
     console.log(`   Order placed: ${txDigest}`);
 
     // Record the order in the contract for tracking
     try {
-      await mirrorContractService.recordOrder(
-        position.positionId,
-        makerOrder.orderId,
-      );
+      if (position.capabilityId) {
+        // Non-custodial: use capability-based recording
+        await mirrorContractService.recordOrderWithCapability(
+          position.capabilityId,
+          position.positionId,
+          makerOrder.orderId,
+        );
+      } else {
+        // Custodial: direct recording (position owned by backend)
+        await mirrorContractService.recordOrder(
+          position.positionId,
+          makerOrder.orderId,
+        );
+      }
     } catch (recordError) {
       console.error(
         `   Warning: Failed to record order in contract:`,
@@ -381,8 +456,16 @@ export class MirrorEngine {
 
     if (positionData && positionData.activeOrders.length > 0) {
       // Cancel orders via DeepBook SDK
-      // Then clear orders in contract
-      await mirrorContractService.clearOrders(positionId);
+      // Then clear orders in contract using capability if available
+      const trackedPos = this.findTrackedPosition(positionId);
+      if (trackedPos?.capabilityId) {
+        await mirrorContractService.clearOrdersWithCapability(
+          trackedPos.capabilityId,
+          positionId,
+        );
+      } else {
+        await mirrorContractService.clearOrders(positionId);
+      }
     }
 
     // Close position on-chain
