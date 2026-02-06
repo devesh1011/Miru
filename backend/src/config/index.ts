@@ -55,4 +55,16 @@ export const config = {
   wallet: {
     privateKey: process.env.WALLET_PRIVATE_KEY || "",
   },
+
+  // zkLogin (non-custodial)
+  zkLogin: {
+    googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+    redirectUrl:
+      process.env.ZKLOGIN_REDIRECT_URL ||
+      "https://miru-zklogin.vercel.app/callback",
+    proverUrl:
+      process.env.ZKLOGIN_PROVER_URL || "https://prover.mystenlabs.com/v1",
+    masterSeed: process.env.ZKLOGIN_MASTER_SEED || "",
+    maxEpochOffset: parseInt(process.env.ZKLOGIN_MAX_EPOCH_OFFSET || "2"),
+  },
 } as const;
