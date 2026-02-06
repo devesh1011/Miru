@@ -18,6 +18,10 @@ module deepmirror::mirror {
     const E_PAUSED: u64 = 6;
     #[allow(unused_const)]
     const E_NOT_ADMIN: u64 = 7;
+    const E_NOT_OPERATOR: u64 = 8;
+    const E_CAPABILITY_EXPIRED: u64 = 9;
+    #[allow(unused_const)]
+    const E_EXCEEDS_MAX_SIZE: u64 = 10;
     
     // ======== Constants ========
     
@@ -71,6 +75,21 @@ module deepmirror::mirror {
         active: bool,
     }
 
+    /// MirrorCapability - delegated authority for backend to operate on a position
+    /// Created by position owner, allows authorized operator to record/remove orders
+    /// without requiring the owner's signature each time.
+    public struct MirrorCapability has key, store {
+        id: UID,
+        /// The position this capability is for
+        position_id: ID,
+        /// The authorized operator address (backend wallet)
+        authorized_operator: address,
+        /// Maximum order size allowed (0 = unlimited)
+        max_order_size: u64,
+        /// Expiration timestamp (ms) - 0 means no expiry
+        expires_at: u64,
+    }
+
     // ======== Events ========
 
     /// Emitted when a new position is created
@@ -122,6 +141,24 @@ module deepmirror::mirror {
     /// Emitted when protocol is paused/unpaused
     public struct ProtocolPaused has copy, drop {
         paused: bool,
+        timestamp: u64,
+    }
+
+    /// Emitted when a capability is granted to an operator
+    public struct CapabilityGranted has copy, drop {
+        capability_id: ID,
+        position_id: ID,
+        operator: address,
+        max_order_size: u64,
+        expires_at: u64,
+        timestamp: u64,
+    }
+
+    /// Emitted when a capability is revoked
+    public struct CapabilityRevoked has copy, drop {
+        capability_id: ID,
+        position_id: ID,
+        operator: address,
         timestamp: u64,
     }
 
@@ -377,6 +414,188 @@ module deepmirror::mirror {
         id.delete();
     }
 
+    // ======== Capability Management (Non-Custodial) ========
+
+    /// Grant a capability to an operator (backend) to manage orders on behalf of position owner
+    /// 
+    /// # Arguments
+    /// * `position` - The position to grant access for
+    /// * `operator` - The backend wallet address to authorize
+    /// * `max_order_size` - Max order size (0 = unlimited)
+    /// * `expires_at` - Expiration timestamp in ms (0 = no expiry)
+    /// * `clock` - Clock for timestamps
+    /// * `ctx` - Transaction context (must be position owner)
+    public fun grant_capability(
+        position: &MirrorPosition,
+        operator: address,
+        max_order_size: u64,
+        expires_at: u64,
+        clock: &Clock,
+        ctx: &mut tx_context::TxContext,
+    ): MirrorCapability {
+        assert!(ctx.sender() == position.owner, E_NOT_OWNER);
+
+        let cap_id = object::new(ctx);
+        let cap_id_copy = cap_id.to_inner();
+        let position_id = position.id.to_inner();
+        let timestamp = clock.timestamp_ms();
+
+        let cap = MirrorCapability {
+            id: cap_id,
+            position_id,
+            authorized_operator: operator,
+            max_order_size,
+            expires_at,
+        };
+
+        event::emit(CapabilityGranted {
+            capability_id: cap_id_copy,
+            position_id,
+            operator,
+            max_order_size,
+            expires_at,
+            timestamp,
+        });
+
+        cap
+    }
+
+    /// Revoke a previously granted capability (destroys it)
+    /// Can be called by position owner
+    /// 
+    /// # Arguments
+    /// * `cap` - The capability to revoke (consumed)
+    /// * `position` - The position this capability belongs to
+    /// * `clock` - Clock for timestamps
+    /// * `ctx` - Transaction context (must be position owner)
+    public fun revoke_capability(
+        cap: MirrorCapability,
+        position: &MirrorPosition,
+        clock: &Clock,
+        ctx: &mut tx_context::TxContext,
+    ) {
+        assert!(ctx.sender() == position.owner, E_NOT_OWNER);
+
+        let timestamp = clock.timestamp_ms();
+        let capability_id = cap.id.to_inner();
+        let position_id = cap.position_id;
+        let operator = cap.authorized_operator;
+
+        event::emit(CapabilityRevoked {
+            capability_id,
+            position_id,
+            operator,
+            timestamp,
+        });
+
+        let MirrorCapability { id, .. } = cap;
+        id.delete();
+    }
+
+    /// Record an order using a capability (called by authorized operator/backend)
+    /// This allows the backend to record orders without the position owner's signature
+    /// 
+    /// # Arguments
+    /// * `cap` - The operator's capability
+    /// * `config` - Protocol configuration
+    /// * `position` - Position to update
+    /// * `order_id` - DeepBook order ID
+    /// * `clock` - Clock for timestamps
+    /// * `ctx` - Transaction context (must be authorized operator)
+    public fun record_order_with_capability(
+        cap: &MirrorCapability,
+        config: &mut ProtocolConfig,
+        position: &mut MirrorPosition,
+        order_id: u128,
+        clock: &Clock,
+        ctx: &mut tx_context::TxContext,
+    ) {
+        // Verify caller is the authorized operator
+        assert!(ctx.sender() == cap.authorized_operator, E_NOT_OPERATOR);
+        // Verify capability matches position
+        assert!(cap.position_id == position.id.to_inner(), E_NOT_OWNER);
+        // Verify not paused
+        assert!(!config.paused, E_PAUSED);
+        // Verify not expired (0 = no expiry)
+        let timestamp = clock.timestamp_ms();
+        if (cap.expires_at > 0) {
+            assert!(timestamp <= cap.expires_at, E_CAPABILITY_EXPIRED);
+        };
+
+        vector::push_back(&mut position.active_orders, order_id);
+        position.total_orders_placed = position.total_orders_placed + 1;
+        position.updated_at = timestamp;
+
+        config.total_orders = config.total_orders + 1;
+
+        event::emit(OrderRecorded {
+            position_id: position.id.to_inner(),
+            order_id,
+            timestamp,
+        });
+    }
+
+    /// Remove an order using a capability (called by authorized operator/backend)
+    /// 
+    /// # Arguments
+    /// * `cap` - The operator's capability
+    /// * `position` - Position to update
+    /// * `order_id` - DeepBook order ID to remove
+    /// * `clock` - Clock for timestamps
+    /// * `ctx` - Transaction context (must be authorized operator)
+    public fun remove_order_with_capability(
+        cap: &MirrorCapability,
+        position: &mut MirrorPosition,
+        order_id: u128,
+        clock: &Clock,
+        ctx: &mut tx_context::TxContext,
+    ) {
+        assert!(ctx.sender() == cap.authorized_operator, E_NOT_OPERATOR);
+        assert!(cap.position_id == position.id.to_inner(), E_NOT_OWNER);
+
+        let timestamp = clock.timestamp_ms();
+        if (cap.expires_at > 0) {
+            assert!(timestamp <= cap.expires_at, E_CAPABILITY_EXPIRED);
+        };
+
+        let (found, index) = position.active_orders.index_of(&order_id);
+        assert!(found, E_ORDER_NOT_FOUND);
+
+        position.active_orders.remove(index);
+        position.updated_at = timestamp;
+
+        event::emit(OrderRemoved {
+            position_id: position.id.to_inner(),
+            order_id,
+            timestamp,
+        });
+    }
+
+    /// Clear all orders using a capability (called by authorized operator/backend)
+    /// 
+    /// # Arguments
+    /// * `cap` - The operator's capability
+    /// * `position` - Position to clear
+    /// * `clock` - Clock for timestamps
+    /// * `ctx` - Transaction context (must be authorized operator)
+    public fun clear_orders_with_capability(
+        cap: &MirrorCapability,
+        position: &mut MirrorPosition,
+        clock: &Clock,
+        ctx: &mut tx_context::TxContext,
+    ) {
+        assert!(ctx.sender() == cap.authorized_operator, E_NOT_OPERATOR);
+        assert!(cap.position_id == position.id.to_inner(), E_NOT_OWNER);
+
+        let timestamp = clock.timestamp_ms();
+        if (cap.expires_at > 0) {
+            assert!(timestamp <= cap.expires_at, E_CAPABILITY_EXPIRED);
+        };
+
+        position.active_orders = vector[];
+        position.updated_at = timestamp;
+    }
+
     // ======== Admin Functions ========
 
     /// Pause/unpause the protocol
@@ -470,6 +689,24 @@ module deepmirror::mirror {
 
     public fun total_orders(config: &ProtocolConfig): u64 {
         config.total_orders
+    }
+
+    // ======== Capability Getters ========
+
+    public fun capability_position_id(cap: &MirrorCapability): ID {
+        cap.position_id
+    }
+
+    public fun capability_operator(cap: &MirrorCapability): address {
+        cap.authorized_operator
+    }
+
+    public fun capability_max_order_size(cap: &MirrorCapability): u64 {
+        cap.max_order_size
+    }
+
+    public fun capability_expires_at(cap: &MirrorCapability): u64 {
+        cap.expires_at
     }
 
     // ======== Test-only Functions ========
