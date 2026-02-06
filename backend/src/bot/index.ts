@@ -69,15 +69,21 @@ export async function startBot(): Promise<void> {
 
   // Set bot commands menu
   await bot.telegram.setMyCommands([
-    { command: "start", description: "Get started with DeepMirror" },
+    { command: "start", description: "Get started with Miru" },
+    { command: "connect", description: "Sign in with Google (zkLogin)" },
+    { command: "wallet", description: "View your wallet" },
     { command: "help", description: "Show all commands" },
     { command: "pools", description: "Browse available DeepBook pools" },
     { command: "discover", description: "Find top makers on a pool" },
     { command: "copy", description: "Start copying a maker" },
     { command: "positions", description: "View your active positions" },
     { command: "stop", description: "Stop a position" },
-    { command: "status", description: "Bot and service status" },
+    { command: "grant", description: "Grant bot permission to mirror" },
+    { command: "revoke", description: "Revoke bot permission" },
+    { command: "deposit", description: "Fund your zkLogin wallet" },
+    { command: "withdraw", description: "Send SUI from your wallet" },
     { command: "balance", description: "Check your balance" },
+    { command: "status", description: "Bot and service status" },
   ]);
 
   // Launch with long polling
