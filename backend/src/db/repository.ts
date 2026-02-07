@@ -1,10 +1,3 @@
-/**
- * Database Repository
- *
- * Data access layer for users, positions, and orders.
- * All methods use async Supabase calls for PostgreSQL.
- */
-
 import { getDb } from "./schema.js";
 
 // ──────────────────────────────────────────────
@@ -18,7 +11,6 @@ export interface DbUser {
   sui_address: string | null;
   balance_manager_id: string | null;
   balance_manager_key: string | null;
-  // zkLogin fields
   zklogin_address: string | null;
   zklogin_salt: string | null;
   zklogin_sub: string | null;

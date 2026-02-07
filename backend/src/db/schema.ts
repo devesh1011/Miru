@@ -1,10 +1,3 @@
-/**
- * Supabase Database Client
- *
- * PostgreSQL database via Supabase for production scalability.
- * Uses @supabase/supabase-js for async database operations.
- */
-
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { config } from "../config/index.js";
 
