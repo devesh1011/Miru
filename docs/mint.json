@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "DeepMirror",
+  "name": "Miru",
   "description": "Copy trade on DeepBook V3 with millisecond precision - right from Telegram",
   "theme": "quill",
   "logo": {
@@ -20,12 +20,12 @@
   "topbarLinks": [
     {
       "name": "Launch Bot",
-      "url": "https://t.me/deepmirror_bot"
+      "url": "https://t.me/miru_bot"
     }
   ],
   "topbarCtaButton": {
     "type": "github",
-    "url": "https://github.com/yourusername/deepmirror"
+    "url": "https://github.com/devesh1011/hackmoney-2026"
   },
   "tabs": [
     {
@@ -63,9 +63,9 @@
     }
   ],
   "footerSocials": {
-    "twitter": "https://twitter.com/deepmirror",
-    "github": "https://github.com/yourusername/deepmirror",
-    "telegram": "https://t.me/deepmirror_community"
+    "twitter": "https://twitter.com/miru_trading",
+    "github": "https://github.com/devesh1011/hackmoney-2026",
+    "telegram": "https://t.me/miru_community"
   },
   "analytics": {
     "ga4": {

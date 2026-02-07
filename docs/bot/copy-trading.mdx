@@ -5,11 +5,11 @@ description: "Mirror successful traders with flexible position sizing strategies
 
 # Copy Trading Guide
 
-DeepMirror's copy trading system monitors maker wallets 24/7 and automatically replicates their DeepBook V3 positions in real-time.
+Miru's copy trading system monitors maker wallets 24/7 and automatically replicates their DeepBook V3 positions in real-time.
 
 ## How Copy Trading Works
 
-When you add a maker wallet, DeepMirror:
+When you add a maker wallet, Miru:
 
 1. **Monitors** their transactions on Sui blockchain
 2. **Detects** when they place orders on DeepBook V3
@@ -38,8 +38,8 @@ You need the Sui address of the trader you want to copy. You can:
 - Use your own test wallet for learning
 
 <Warning>
-  Only copy traders you trust! DeepMirror executes trades automatically. Do your
-  own research.
+  Only copy traders you trust! Miru executes trades automatically. Do your own
+  research.
 </Warning>
 
 ### Step 2: Add the Maker
@@ -267,7 +267,7 @@ After revoking, the bot can no longer place trades until you grant a new capabil
 
 ## Notifications
 
-DeepMirror sends Telegram notifications for key events:
+Miru sends Telegram notifications for key events:
 
 ### Position Created
 
@@ -331,7 +331,7 @@ Maker wallet submits a transaction to DeepBook V3:
 
 ### 2. Bot Detects Transaction
 
-DeepMirror monitors blockchain events:
+Miru monitors blockchain events:
 
 - Detects maker's transaction within 500ms
 - Extracts position details (pool, side, price)
@@ -357,7 +357,7 @@ Your order is placed on DeepBook V3:
 
 ### 5. Position Monitoring
 
-DeepMirror tracks both positions:
+Miru tracks both positions:
 
 - Syncs order counts
 - Monitors maker's updates

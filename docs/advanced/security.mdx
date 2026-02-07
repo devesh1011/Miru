@@ -5,7 +5,7 @@ description: "Best practices for protecting your wallet and positions"
 
 # Security Guide
 
-Comprehensive security practices for safe copy trading on DeepMirror.
+Comprehensive security practices for safe copy trading on Miru.
 
 ## Threat Model
 
@@ -21,8 +21,7 @@ Understanding potential risks:
 | **Phishing**                  | Reveal sensitive data          | Medium     | Verify sources, no DMs                 |
 
 <Warning>
-  DeepMirror is **testnet-only**. Never use real funds until official mainnet
-  launch!
+  Miru is **testnet-only**. Never use real funds until official mainnet launch!
 </Warning>
 
 ## Wallet Security
@@ -71,7 +70,7 @@ Create a **separate Google account** for blockchain:
 
 ```
 Personal: john.doe@gmail.com (daily use)
-Blockchain: johndoe.web3@gmail.com (DeepMirror only)
+Blockchain: johndoe.web3@gmail.com (Miru only)
 ```
 
 **Benefits:**
@@ -94,7 +93,7 @@ https://authflow.sui.io/#id_token=eyJhbGc...
 **DO:**
 
 - ✅ Copy URL from browser address bar
-- ✅ Paste directly in DeepMirror bot
+- ✅ Paste directly in Miru bot
 - ✅ Use external browser (not in-app)
 - ✅ Delete the message after successful login
 
@@ -151,7 +150,7 @@ If you suspect session compromise:
 
 #### Export Wallet (Advanced)
 
-DeepMirror lets you export your ephemeral private key:
+Miru lets you export your ephemeral private key:
 
 1. Go to `/wallet`
 2. Tap **🔑 Export Wallet**
@@ -169,7 +168,7 @@ DeepMirror lets you export your ephemeral private key:
 **Option 1: Password Manager**
 
 ```
-Entry: DeepMirror Wallet
+Entry: Miru Wallet
 Username: 0x1a2b3c4d...
 Password: [private key]
 Notes: Testnet only, Feb 2026
@@ -227,7 +226,7 @@ When first activating copy trading:
 
    ```
    Grant capability to:
-   DeepMirror Bot (0x9a8b...)
+   Miru Bot (0x9a8b...)
 
    Permissions:
    - Place limit orders
@@ -238,7 +237,7 @@ When first activating copy trading:
    - Transfer assets
    ```
 
-2. **Verify bot address** (0x9a8b...) matches [official docs](https://docs.deepmirror.xyz)
+2. **Verify bot address** (0x9a8b...) matches [official docs](https://docs.miru.xyz)
 3. **Approve transaction** via zkLogin
 4. **Capability created** and stored
 
@@ -432,40 +431,40 @@ Common phishing tactics:
 #### Fake Bot DMs
 
 ```
-Scammer: "DeepMirror Support"
+Scammer: "Miru Support"
 Message: "Your wallet has an issue. Send your private key to resolve."
 
-Reality: DeepMirror will NEVER DM you first!
+Reality: Miru will NEVER DM you first!
 ```
 
 **Verification:**
 
-- ✅ Official bot: @deepmirror_bot (check username)
+- ✅ Official bot: @miru_bot (check username)
 - ✅ Never asks for private keys
 - ✅ Never asks for redirect URLs
-- ✅ All help is in-bot or on docs.deepmirror.xyz
+- ✅ All help is in-bot or on docs.miru.xyz
 
 #### Fake Support Channels
 
 ```
-Scammer creates: "DeepMirror Official Support" (Telegram group)
+Scammer creates: "Miru Official Support" (Telegram group)
 
 Reality: Only trust official links from docs!
 ```
 
 **Verify:**
 
-- Official community: [t.me/deepmirror_community](https://t.me/deepmirror_community)
-- Check footer of docs.deepmirror.xyz
+- Official community: [t.me/miru_community](https://t.me/miru_community)
+- Check footer of docs.miru.xyz
 - Admins have verified badges
 
 #### Malicious Links
 
 ```
-Scammer: "Claim your airdrop: deepmirr0r.xyz"
-                                         ↑ zero instead of 'o'
+Scammer: "Claim your airdrop: mir0.xyz"
+                                   ↑ zero instead of 'u'
 
-Legit: docs.deepmirror.xyz
+Legit: docs.miru.xyz
 ```
 
 **Always:**
@@ -563,8 +562,8 @@ In `/settings`, turn on:
 5. **Enable Google 2FA** (if not already)
 
 6. **Contact support:**
-   - Report to Telegram: @deepmirror_support
-   - Email: security@deepmirror.xyz
+   - Report to Telegram: @miru_support
+   - Email: security@miru.xyz
    - Include: wallet address, timestamp, details
 
 ### If Suspicious Activity Detected
@@ -672,7 +671,7 @@ You: "I didn't authorize this!"
   Telegram privacy and security
 </Card>
 
-  <Card title="Report Security Issue" icon="bug" href="mailto:security@deepmirror.xyz">
+  <Card title="Report Security Issue" icon="bug" href="mailto:security@miru.xyz">
     Confidential security reports
   </Card>
 </CardGroup>

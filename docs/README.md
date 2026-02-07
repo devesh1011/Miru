@@ -1,6 +1,6 @@
-# DeepMirror Documentation
+# Miru Documentation
 
-Comprehensive documentation for the DeepMirror Telegram bot - copy trading on DeepBook V3.
+Comprehensive documentation for the Miru Telegram bot - copy trading on DeepBook V3.
 
 ## 📚 Documentation Structure
 
@@ -98,22 +98,14 @@ Mintlify provides rich components:
   Card content
 </Card>
 
-<Tip>
-  Helpful tip for users
-</Tip>
+<Tip>Helpful tip for users</Tip>
 
-<Warning>
-  Important warning
-</Warning>
+<Warning>Important warning</Warning>
 
-<Info>
-  Additional information
-</Info>
+<Info>Additional information</Info>
 
 <AccordionGroup>
-  <Accordion title="Question">
-    Answer
-  </Accordion>
+  <Accordion title="Question">Answer</Accordion>
 </AccordionGroup>
 ```
 
@@ -126,7 +118,9 @@ const example = "code";
 \`\`\`
 
 \`\`\`bash
+
 # Shell commands
+
 npm install
 \`\`\`
 ```
@@ -155,7 +149,7 @@ Edit `mint.json` to change:
     {
       "group": "Group Name",
       "pages": [
-        "path/to/page"  // Add new page here
+        "path/to/page" // Add new page here
       ]
     }
   ]

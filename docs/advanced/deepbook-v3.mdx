@@ -5,7 +5,7 @@ description: "Understanding the DeepBook V3 central limit order book on Sui"
 
 # DeepBook V3 Protocol
 
-DeepBook V3 is Sui's native on-chain central limit order book (CLOB). DeepMirror executes all copy trades through this protocol.
+DeepBook V3 is Sui's native on-chain central limit order book (CLOB). Miru executes all copy trades through this protocol.
 
 ## What is DeepBook?
 
@@ -116,7 +116,7 @@ Total: 10.5 DBUSDC (- fees)
 - Can be canceled
 - Maker fee applies (lower than taker)
 
-### Market Orders (Not Used by DeepMirror)
+### Market Orders (Not Used by Miru)
 
 Immediately match best available price:
 
@@ -130,9 +130,7 @@ Sell 10 SUI immediately
 Takes best BID prices
 ```
 
-<Note>
-  DeepMirror **only places limit orders** to copy maker's exact strategy.
-</Note>
+<Note>Miru **only places limit orders** to copy maker's exact strategy.</Note>
 
 ## Order Lifecycle
 
@@ -257,8 +255,8 @@ Deducted directly from quote token
 - ❌ No ecosystem support
 
 <Tip>
-  **DeepMirror always uses DEEP tokens** (`payWithDeep: true`) for lower fees.
-  Ensure you have DEEP balance!
+  **Miru always uses DEEP tokens** (`payWithDeep: true`) for lower fees. Ensure
+  you have DEEP balance!
 </Tip>
 
 ## Pool States
@@ -347,11 +345,11 @@ Next order: Nonce 44
 - Preventing replays
 - Tracking order history
 
-## DeepMirror's DeepBook Integration
+## Miru's DeepBook Integration
 
 ### Position Creation
 
-When maker trades, DeepMirror:
+When maker trades, Miru:
 
 1. **Detects** maker's DeepBook transaction
 2. **Extracts** pool address, side, price, quantity
@@ -363,7 +361,7 @@ When maker trades, DeepMirror:
 
 ### Transaction Structure
 
-DeepMirror builds Sui transactions like:
+Miru builds Sui transactions like:
 
 ```typescript
 const tx = new Transaction();
@@ -391,7 +389,7 @@ const result = await sui.signAndExecuteTransaction({
 
 ### Monitoring Positions
 
-DeepMirror polls DeepBook to sync order counts:
+Miru polls DeepBook to sync order counts:
 
 ```typescript
 // Every 30 seconds
@@ -440,7 +438,7 @@ Audits: Production-grade
 - Failsafe mechanisms
 
 <Warning>
-  **Never use mainnet until officially announced.** DeepMirror is currently
+  **Never use mainnet until officially announced.** Miru is currently
   testnet-only.
 </Warning>
 

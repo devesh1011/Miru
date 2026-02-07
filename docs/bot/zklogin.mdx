@@ -16,8 +16,8 @@ zkLogin combines three technologies:
 3. **Deterministic Wallets** - Your Google account ID maps to a unique Sui address
 
 <Info>
-  zkLogin is **native to Sui blockchain**. DeepMirror leverages this protocol
-  for seamless authentication.
+  zkLogin is **native to Sui blockchain**. Miru leverages this protocol for
+  seamless authentication.
 </Info>
 
 ## How zkLogin Works
@@ -55,7 +55,7 @@ User → Sign in with Google
 - ✅ Cryptographically secure
 - ✅ Fully self-custodial
 
-## DeepMirror's zkLogin Implementation
+## Miru's zkLogin Implementation
 
 ### Authentication Flow
 
@@ -146,7 +146,7 @@ In the database:
 4. **Approve OAuth**
    - Google asks you to sign in (if not already)
    - Shows permissions request:
-     - "DeepMirror wants to access your email"
+     - "Miru wants to access your email"
      - This is normal for OAuth
    - Click **Allow**
 
@@ -159,14 +159,14 @@ In the database:
    - **Copy the ENTIRE URL** (including `#` and everything after)
 
 6. **Paste in Telegram**
-   - Return to DeepMirror bot
+   - Return to Miru bot
    - Paste the full URL
    - Bot processes the JWT
    - Wallet created!
 
 <Tip>
-  The URL contains sensitive data. Only paste it in the DeepMirror bot, never
-  share publicly!
+  The URL contains sensitive data. Only paste it in the Miru bot, never share
+  publicly!
 </Tip>
 
 ### Success Confirmation
@@ -260,7 +260,7 @@ When session expires (or any time before):
 
 - Ephemeral keys stored here
 - If leaked, attacker can sign for remaining session duration
-- DeepMirror encrypts this data
+- Miru encrypts this data
 
 ### zkLogin vs. Traditional Wallets
 
@@ -358,7 +358,7 @@ zkLogin sessions can span max **10 epochs** (~10 days), but:
 
 <Accordion title="Different wallet address appeared">
   **Likely causes:** 1. Different Google account used 2. Different address_seed
-  (shouldn't happen in DeepMirror) **Solution:** - Use the **exact same Google
+  (shouldn't happen in Miru) **Solution:** - Use the **exact same Google
   account** every time - Contact support if persists
 </Accordion>
 
@@ -399,8 +399,8 @@ zkLogin sessions can span max **10 epochs** (~10 days), but:
 ✅ Critical production funds
 
 <Tip>
-  For DeepMirror, zkLogin is ideal: easy access, frequent re-authentication is
-  fine, and you can always export keys later!
+  For Miru, zkLogin is ideal: easy access, frequent re-authentication is fine,
+  and you can always export keys later!
 </Tip>
 
 ## Privacy Considerations
@@ -410,7 +410,7 @@ zkLogin sessions can span max **10 epochs** (~10 days), but:
 When you use zkLogin with Google:
 
 - Google knows you authenticated with a Sui app
-- Google sees your email accessed "DeepMirror"
+- Google sees your email accessed "Miru"
 - Google **doesn't** know:
   - Your blockchain address
   - Your transaction history
