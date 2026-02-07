@@ -11,6 +11,7 @@ export interface DbUser {
   sui_address: string | null;
   balance_manager_id: string | null;
   balance_manager_key: string | null;
+  trade_cap_id: string | null;
   zklogin_address: string | null;
   zklogin_salt: string | null;
   zklogin_sub: string | null;
@@ -162,6 +163,42 @@ export const userRepo = {
 
     if (error) {
       throw new Error(`Failed to set balance manager: ${error.message}`);
+    }
+  },
+
+  /**
+   * Set trade cap ID for a user (grants bot trading authority)
+   */
+  async setTradeCap(telegramId: string, tradeCapId: string): Promise<void> {
+    const db = getDb();
+    const { error } = await db
+      .from("users")
+      .update({
+        trade_cap_id: tradeCapId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("telegram_id", telegramId);
+
+    if (error) {
+      throw new Error(`Failed to set trade cap: ${error.message}`);
+    }
+  },
+
+  /**
+   * Clear trade cap ID (when user revokes bot access)
+   */
+  async clearTradeCap(telegramId: string): Promise<void> {
+    const db = getDb();
+    const { error } = await db
+      .from("users")
+      .update({
+        trade_cap_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("telegram_id", telegramId);
+
+    if (error) {
+      throw new Error(`Failed to clear trade cap: ${error.message}`);
     }
   },
 
