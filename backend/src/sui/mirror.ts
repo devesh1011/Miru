@@ -107,6 +107,36 @@ export class MirrorContractService {
   }
 
   /**
+   * Build a toggle_active Transaction without executing.
+   * Caller is responsible for signing (e.g. via zkLogin).
+   */
+  buildToggleActive(positionId: string): (tx: Transaction) => void {
+    const packageId = this.packageId;
+    return (tx: Transaction) => {
+      const clockId = "0x6";
+      tx.moveCall({
+        target: `${packageId}::mirror::toggle_active`,
+        arguments: [tx.object(positionId), tx.object(clockId)],
+      });
+    };
+  }
+
+  /**
+   * Build a close_position Transaction without executing.
+   * Caller is responsible for signing (e.g. via zkLogin).
+   */
+  buildClosePosition(positionId: string): (tx: Transaction) => void {
+    const packageId = this.packageId;
+    return (tx: Transaction) => {
+      const clockId = "0x6";
+      tx.moveCall({
+        target: `${packageId}::mirror::close_position`,
+        arguments: [tx.object(positionId), tx.object(clockId)],
+      });
+    };
+  }
+
+  /**
    * Record an order placement in the contract
    */
   async recordOrder(positionId: string, orderId: string): Promise<string> {
