@@ -1,290 +1,243 @@
-# Miru - Automated Copy Trading for DeepBook V3
+# 🪞 Miru
 
-> **Non-custodial liquidity mirroring bot for Sui's DeepBook CLOB**
+> **Non-custodial copy trading for Sui DeepBook V3**  
+> Mirror top liquidity providers. Keep your keys. Built for HackMoney 2026.
 
-Built for **HackMoney 2026**
-
----
-
-## 🎯 What is Miru?
-
-Miru (formerly DeepMirror) is a **Telegram bot** that lets you automatically copy successful market makers on Sui's DeepBook V3 CLOB. You maintain full control of your funds via **zkLogin** (Google authentication) while the bot mirrors your chosen maker's orders at your preferred ratio.
-
-**Key Features:**
-
-- 🔐 **Non-custodial** - Your keys, your coins (via zkLogin)
-- 📱 **Telegram-native** - Complete trading from your phone
-- ⚡ **Real-time** - Automatically mirrors orders as they happen
-- 📊 **Customizable** - Choose your copy ratio (1-100%)
-- 🛡️ **Secure** - Capability-based permissions with expiration
+[![Sui](https://img.shields.io/badge/Sui-Blockchain-4DA2FF?logo=sui)](https://sui.io)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Move](https://img.shields.io/badge/Move-Smart_Contracts-brightgreen)](https://move-language.github.io/)
 
 ---
 
-## 🚀 Quick Start
+## The Problem
 
-### Prerequisites
+Retail traders struggle to compete with professional market makers on DEXs. Copy trading exists on centralized exchanges but **requires giving up custody**. On-chain alternatives are fragmented, complex, or non-existent.
 
-- Telegram account
-- Google account (for zkLogin)
-- Testnet SUI tokens ([get from faucet](https://faucet.testnet.sui.io/))
+## The Solution
 
-### User Flow
+**Miru** automatically mirrors successful DeepBook V3 market makers via Telegram. Users keep full custody through **zkLogin** (sign transactions with Google), while the bot discovers top traders and replicates their strategies in real-time.
 
-1. **Connect your wallet**
+### Why Sui?
 
-   ```
-   /connect
-   ```
+- **zkLogin**: Non-custodial onboarding without seed phrases
+- **DeepBook V3**: Professional-grade CLOB with granular order data
+- **Object Model**: Capability-based permissions for secure delegation
+- **Parallel Execution**: Handle high-frequency order mirroring efficiently
 
-   - Click the Google OAuth link
-   - Complete authentication
-   - Copy your JWT token
-   - Submit with `/auth <jwt>`
+---
 
-2. **Fund your wallet**
+## ✨ Key Features
 
-   ```
-   /deposit
-   ```
+| Feature                    | Description                                            |
+| -------------------------- | ------------------------------------------------------ |
+| 🔐 **zkLogin Integration** | Sign in with Google, no seed phrases required          |
+| 🔍 **Real-time Discovery** | Find top traders by volume, win rate, and performance  |
+| 🪞 **Automated Mirroring** | Auto-copy orders at customizable ratios (1-100%)       |
+| 📊 **Portfolio Analytics** | Track P&L, win rates, and performance across positions |
+| 🛡️ **Risk Management**     | Stop-loss, take-profit, daily limits, auto-pause       |
+| 🔔 **Smart Notifications** | Context-aware alerts with P&L updates                  |
 
-   - Get your zkLogin wallet address
-   - Fund it with testnet SUI
+---
 
-3. **Discover top makers**
+## 🚀 Try It Now
 
-   ```
-   /discover DEEP_SUI
-   ```
+### Trading Flow
 
-   - Browse successful market makers
-   - See their performance metrics
+```bash
+# 1. Connect wallet (zkLogin)
+/start → Wallet → Connect Wallet
+# Opens Google OAuth, returns zkLogin address
 
-4. **Start copying**
+# 2. Fund your wallet
+# Send testnet SUI to your zkLogin address
 
-   ```
-   /copy <maker_address> DEEP_SUI 25
-   ```
+# 3. Discover top traders
+/pools → Browse Pools → Select Pool → Discover Makers
+# Shows real mainnet DeepBook data
 
-   - Creates a mirror position at 25% ratio
-   - Auto-places proportional orders when maker trades
+# 4. Create mirror position
+Select maker → Choose ratio (10-100%) → Confirm
+# Creates on-chain MirrorPosition object
 
-5. **Manage your positions**
-   ```
-   /positions        # List active positions
-   /status <id>      # View position details
-   /stop <id>        # Deactivate position
-   ```
+# 5. Grant permissions
+Positions → Grant Capability
+# Allows backend to record orders via MirrorCapability
+
+# Position now auto-mirrors maker's orders!
+```
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-Telegram Bot → Backend Services → Sui Blockchain
-                    ↓                    ↓
-              SQLite Database    Mirror Contract + DeepBook V3
+┌─────────────┐      ┌──────────────────┐      ┌────────────────┐
+│  Telegram   │─────▶│  Backend Server  │─────▶│  Sui Blockchain│
+│   (User)    │      │                  │      │                │
+└─────────────┘      │ • Mirror Engine  │      │ • DeepBook V3  │
+                     │ • Event Monitor  │      │ • Mirror Module│
+                     │ • zkLogin Svc    │      │ • zkLogin      │
+                     │ • Risk Manager   │      └────────────────┘
+                     │ • Analytics      │
+                     └──────────────────┘
+                             │
+                             ▼
+                     ┌──────────────────┐
+                     │  Supabase (DB)   │
+                     │ • Positions      │
+                     │ • Analytics      │
+                     │ • Risk Settings  │
+                     └──────────────────┘
 ```
 
-### Components
+### Core Components
 
-**Backend** (`/backend`)
+**Backend Services** (`/backend/src/services`):
 
-- TypeScript Node.js server
-- zkLogin authentication service
-- Mirror engine (order detection & placement)
-- Event monitor (DeepBook pool subscriptions)
-- Telegram bot interface (17 commands)
+- `mirror-engine.ts` - Detects maker orders, executes mirrors
+- `event-monitor.ts` - Subscribes to DeepBook pool events
+- `zklogin.ts` - Manages user authentication & signing
+- `analytics.ts` - Tracks P&L, win rates, portfolio stats
+- `risk-manager.ts` - Pre/post-trade risk enforcement
+- `smart-notifier.ts` - Context-aware Telegram notifications
 
-**Smart Contracts** (`/contracts`)
+**Smart Contracts** (`/contracts/miru`):
 
-- Move module for position management
-- Capability-based backend authorization
-- Order tracking and lifecycle management
+- `MirrorPosition` - Stores position config (maker, pool, ratio)
+- `MirrorCapability` - Delegates backend permission to record orders
+- `create_position()` - User-owned position creation
+- `record_order()` - Backend tracks executed orders
 
-**OAuth Callback** (`/callback`)
+**Bot Interface** (`/backend/src/bot`):
 
-- Static HTML page for Google OAuth redirect
-- Extracts JWT for zkLogin flow
+- Menu-driven UI with inline keyboards
+- 17 slash commands + button callbacks
+- Conversation state management
+- Error handling with user-friendly messages
 
 ---
 
-## 📦 Installation & Setup
+## �️ Tech Stack
 
-### Backend
+| Layer          | Technologies                                          |
+| -------------- | ----------------------------------------------------- |
+| **Blockchain** | Sui, DeepBook V3 SDK, Move smart contracts, zkLogin   |
+| **Backend**    | Node.js, TypeScript, Telegraf (bot framework)         |
+| **SDKs**       | @mysten/sui v2.3.0, @mysten/deepbook-v3 v1.0.3        |
+| **Database**   | Supabase PostgreSQL (RLS enabled)                     |
+| **Auth**       | zkLogin (Google OAuth), ephemeral keypairs, ZK proofs |
+
+---
+
+## 📦 Setup & Installation
+
+### 1. Clone Repository
+
+```bash
+git clone https://github.com/yourusername/miru.git
+cd miru
+```
+
+### 2. Backend Setup
 
 ```bash
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your credentials
+```
+
+**Edit `.env`:**
+
+```bash
+# Network
+SUI_NETWORK=testnet  # or mainnet
+SUI_RPC_URL=https://fullnode.testnet.sui.io:443
+
+# Wallet (backend operator)
+WALLET_PRIVATE_KEY=suiprivkey1q...
+
+# zkLogin
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+ZKLOGIN_REDIRECT_URL=https://your-callback-url.vercel.app/callback
+ZKLOGIN_MASTER_SEED=random-seed-for-address-derivation
+
+# Telegram
+TELEGRAM_BOT_TOKEN=your-bot-token-from-botfather
+
+# Database
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-key
+
+# Contracts (testnet)
+MIRROR_PACKAGE_ID=0x3a5ee3378bb45a032eeb185a93ebcc1c2ee1b06848d4323a27c9539a653cdf31
+DEEPBOOK_PACKAGE_ID=0x2c8d603bc51326b8c13cef9dd07031a408a48dddb541963357661df5d3204809
+```
+
+**Run:**
+
+```bash
 npm run build
 npm start
 ```
 
-**Required Environment Variables:**
+### 3. Smart Contracts (Optional)
 
-```bash
-SUI_NETWORK=testnet
-WALLET_PRIVATE_KEY=<backend_operator_key>
-ZKLOGIN_GOOGLE_CLIENT_ID=<your_client_id>
-ZKLOGIN_REDIRECT_URL=<your_callback_url>
-ZKLOGIN_MASTER_SEED=<random_seed>
-TELEGRAM_BOT_TOKEN=<your_bot_token>
-MIRROR_PACKAGE_ID=<deployed_contract_address>
-```
-
-### Smart Contracts
+Contracts already deployed to testnet. To redeploy:
 
 ```bash
 cd contracts
 sui move build
 sui client publish --gas-budget 100000000
-# Update MIRROR_PACKAGE_ID in backend/.env
+# Update MIRROR_PACKAGE_ID in .env
 ```
 
-### OAuth Callback
+### 4. OAuth Callback (Optional)
 
 ```bash
 cd callback
-# Deploy to Vercel or any static host
 vercel deploy
-# Update ZKLOGIN_REDIRECT_URL in backend/.env
+# Update ZKLOGIN_REDIRECT_URL in .env
+```
+
+### 5. Database Migrations
+
+```bash
+cd backend/supabase/migrations
+# Apply migrations via Supabase dashboard or CLI
+supabase db push
 ```
 
 ---
 
-## 🎮 Bot Commands
+## � Sui-Specific Innovation
 
-| Command                        | Description                   |
-| ------------------------------ | ----------------------------- |
-| `/start`                       | Welcome message               |
-| `/connect`                     | Start zkLogin authentication  |
-| `/auth <jwt>`                  | Complete zkLogin with JWT     |
-| `/wallet`                      | View wallet address & balance |
-| `/deposit`                     | Get deposit instructions      |
-| `/withdraw <addr> <amt>`       | Withdraw SUI                  |
-| `/pools`                       | Browse available pools        |
-| `/discover <pool>`             | Find top makers               |
-| `/copy <maker> <pool> <ratio>` | Create mirror position        |
-| `/positions`                   | List your positions           |
-| `/status <id>`                 | View position details         |
-| `/stop <id>`                   | Deactivate position           |
-| `/grant <id>`                  | Allow backend to place orders |
-| `/revoke <id>`                 | Remove backend permissions    |
-| `/balance`                     | Check balances                |
-| `/help`                        | Command reference             |
+### zkLogin Integration
 
----
+- **No seed phrases**: Users sign in with Google
+- **Non-custodial**: Ephemeral keypairs + ZK proofs = user-owned addresses
+- **UX breakthrough**: Onboard anyone, not just crypto natives
 
-## 🛠️ Tech Stack
+### DeepBook V3 CLOB
 
-**Blockchain:**
+- **Professional-grade**: Order book data (price, quantity, maker address)
+- **Real-time events**: Subscribe to pool updates for instant mirroring
+- **Mainnet data**: Discover actual high-volume traders ($5M+ daily)
 
-- Sui blockchain (testnet)
-- DeepBook V3 CLOB
-- Sui Move smart contracts
+### Capability-Based Permissions
 
-**Backend:**
+- `MirrorCapability` object grants backend limited delegation
+- User retains ownership of `MirrorPosition`
+- Capability can be revoked anytime
+- Expiration-based for time-limited access
 
-- Node.js + TypeScript
-- Telegraf (Telegram bot framework)
-- @mysten/sui SDK (v2.3.0)
-- @mysten/deepbook-v3 SDK (v1.0.3)
-- better-sqlite3 (local database)
+### Hybrid Architecture
 
-**Authentication:**
-
-- zkLogin (Google OAuth → Sui address)
-- Ephemeral keypairs
-- ZK proofs from Mysten Labs prover
-
----
-
-## 📊 Project Status
-
-**✅ Completed:**
-
-- zkLogin authentication flow
-- Mirror position smart contracts
-- Telegram bot with 17 commands
-- Event monitoring infrastructure
-- Comprehensive error handling
-- OAuth callback page
-
-**🚧 In Progress:**
-
-- End-to-end testing with live users
-- Real-time order mirroring validation
-- Performance optimization
-
-**📋 Next Steps:**
-
-- Order synchronization (filled/cancelled)
-- Advanced position analytics
-- Multi-maker portfolio management
-- Telegram mini-app UI
-
-See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for detailed status report.
-
----
-
-## 🔗 Key Links
-
-- **Deployed Contract (Testnet):** `0x3a5ee3378bb45a032eeb185a93ebcc1c2ee1b06848d4323a27c9539a653cdf31`
-- **DeepBook V3 Docs:** https://docs.sui.io/standards/deepbookv3-sdk
-- **zkLogin Docs:** https://docs.sui.io/concepts/cryptography/zklogin
-- **Sui Testnet Faucet:** https://faucet.testnet.sui.io/
-
----
-
-## 🐛 Known Issues & Fixes
-
-### Recent Critical Fix: Groth16 Proof Verification ✅
-
-**Issue:** Transaction signing failed with "Groth16 proof verify failed"
-
-**Root Cause:** Prover service received raw public key instead of extended format
-
-**Fix:** Now using `getExtendedEphemeralPublicKey()` for prover calls
-
-**To Test:** Users must re-authenticate (`/connect`) to get a new proof
-
----
-
-## 📝 Example Flow
-
-```
-User: /connect
-Bot:  🔐 Click here to authenticate: [Google OAuth Link]
-
-[User clicks link, completes Google OAuth, gets JWT]
-
-User: /auth eyJhbGciOiJSUzI1NiIs...
-Bot:  ✅ Wallet connected!
-      Your Sui address: 0x4eb8183c889...
-
-User: /deposit
-Bot:  💰 Send SUI to: 0x4eb8183c889...
-
-[User funds wallet via faucet]
-
-User: /discover DEEP_SUI
-Bot:  📊 Top Makers in DEEP_SUI:
-      1. 0x25a3c5... - 10,523 DEEP volume
-      2. 0x8f21ab... - 8,891 DEEP volume
-      [Copy] buttons
-
-User: /copy 0x25a3c5...95bb1b DEEP_SUI 25
-Bot:  🔄 Setting up mirror position...
-      ✅ Position created! ID: 0xabc123...
-
-User: /grant 0xabc123...
-Bot:  ✅ Backend authorized to place orders
-      Your position is now active!
-
-[Backend automatically mirrors maker's orders at 25% ratio]
-```
+- **User wallet** (zkLogin): Owns positions, can pause/close
+- **Backend wallet**: Places DeepBook orders (automated trading)
+- **Best of both worlds**: Non-custodial control + automation
 
 ---
 
 **Built with ❤️ for HackMoney 2026**
+
+_Making professional trading accessible to everyone._
