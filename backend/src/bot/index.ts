@@ -7,7 +7,7 @@
 
 import { Telegraf, Context, Markup } from "telegraf";
 import { config } from "../config/index.js";
-import { userRepo } from "../db/index.js";
+import { userRepo, type DbUser } from "../db/index.js";
 import { registerCommands } from "./commands.js";
 
 /**
@@ -15,7 +15,7 @@ import { registerCommands } from "./commands.js";
  */
 export interface BotContext extends Context {
   /** DB user record (populated by middleware) */
-  dbUser?: ReturnType<typeof userRepo.findOrCreate>;
+  dbUser?: DbUser;
 }
 
 let bot: Telegraf<BotContext> | null = null;
@@ -39,7 +39,7 @@ export function createBot(): Telegraf<BotContext> {
   // Ensure user exists in DB for every message
   bot.use(async (ctx, next) => {
     if (ctx.from) {
-      ctx.dbUser = userRepo.findOrCreate(
+      ctx.dbUser = await userRepo.findOrCreate(
         ctx.from.id.toString(),
         ctx.from.username,
       );

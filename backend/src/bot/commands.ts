@@ -270,7 +270,7 @@ function buildMainMenuKeyboard() {
 async function handleStart(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
   const username = ctx.from?.first_name || "there";
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   const hasWallet = !!user?.zklogin_address;
 
@@ -295,6 +295,7 @@ async function handleStart(ctx: BotContext): Promise<void> {
     `🪞 Welcome to Miru, ${username}!\n` +
       walletLine +
       `\nMiru automatically copies top LPs on Sui's DeepBook CLOB — fully non-custodial.\n\n` +
+      `💡 You'll need SUI (gas) and DEEP tokens (trading fees) to copy trade.\n\n` +
       `Select an option:`,
     buildMainMenuKeyboard(),
   );
@@ -302,7 +303,7 @@ async function handleStart(ctx: BotContext): Promise<void> {
 
 async function handleMainMenu(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   let walletLine = "";
   if (user?.zklogin_address) {
@@ -339,7 +340,7 @@ async function handleCopyTradingMenu(ctx: BotContext): Promise<void> {
   await ctx.answerCbQuery?.().catch(() => {});
 
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.zklogin_address) {
     try {
@@ -364,7 +365,7 @@ async function handleCopyTradingMenu(ctx: BotContext): Promise<void> {
     return;
   }
 
-  const positions = positionRepo.getActiveByUser(telegramId);
+  const positions = await positionRepo.getActiveByUser(telegramId);
 
   try {
     await ctx.editMessageText(
@@ -598,7 +599,7 @@ async function handleCopyMakerCallback(ctx: BotContext): Promise<void> {
 
   const { poolName, balanceManagerId } = entry;
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.zklogin_address) {
     await ctx.reply(
@@ -612,7 +613,7 @@ async function handleCopyMakerCallback(ctx: BotContext): Promise<void> {
   }
 
   // Check already copying
-  const existingPositions = positionRepo.getActiveByUser(telegramId);
+  const existingPositions = await positionRepo.getActiveByUser(telegramId);
   const duplicate = existingPositions.find(
     (p) =>
       p.target_maker === balanceManagerId &&
@@ -717,7 +718,7 @@ async function executeCopy(
   poolKey: string,
   ratio: number,
 ): Promise<void> {
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.sui_address) {
     await ctx.reply(
@@ -734,6 +735,7 @@ async function executeCopy(
       `Maker: ${truncateAddress(makerAddress)}\n` +
       `Pool: ${poolKey.toUpperCase()}\n` +
       `Ratio: ${ratio}%\n\n` +
+      `💡 Ensure you have DEEP tokens for trading fees\n\n` +
       `⏳ Creating on-chain position...`,
   );
 
@@ -788,7 +790,7 @@ async function executeCopy(
       }
 
       const balanceManagerKey = user.balance_manager_key || "MANAGER_1";
-      positionRepo.create({
+      await positionRepo.create({
         id: positionId,
         userTelegramId: telegramId,
         targetMaker: makerAddress,
@@ -799,7 +801,7 @@ async function executeCopy(
       });
 
       if (capabilityId) {
-        capabilityRepo.create({
+        await capabilityRepo.create({
           id: capabilityId,
           positionId,
           userTelegramId: telegramId,
@@ -852,7 +854,7 @@ async function executeCopy(
         balanceManagerKey,
       });
 
-      positionRepo.create({
+      await positionRepo.create({
         id: positionId,
         userTelegramId: telegramId,
         targetMaker: makerAddress,
@@ -905,7 +907,7 @@ async function handleWalletMenu(ctx: BotContext): Promise<void> {
   await ctx.answerCbQuery?.().catch(() => {});
 
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.zklogin_address) {
     try {
@@ -952,6 +954,9 @@ async function handleWalletMenu(ctx: BotContext): Promise<void> {
     `Balance: ${balance}\n` +
     `Session: ${sessionStatus}\n` +
     `Auth: Google (zkLogin)\n\n` +
+    `💡 Required tokens:\n` +
+    `• SUI — Gas fees for transactions\n` +
+    `• DEEP — Trading fees on DeepBook\n\n` +
     `This is a non-custodial wallet — only you can sign transactions.`;
 
   const buttons = [
@@ -984,7 +989,7 @@ async function handleDepositAction(ctx: BotContext): Promise<void> {
   await ctx.answerCbQuery?.().catch(() => {});
 
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.zklogin_address) {
     await ctx.reply(
@@ -1008,10 +1013,13 @@ async function handleDepositAction(ctx: BotContext): Promise<void> {
     `💳 Deposit to your Miru wallet\n\n` +
       `Your address:\n${user.zklogin_address}\n\n` +
       `Current balance: ${balance}\n\n` +
-      `Send SUI to the address above from any Sui wallet.\n\n` +
-      `💡 You need SUI for:\n` +
-      `• Gas fees when creating positions\n` +
-      `• Gas fees when granting/revoking capabilities`,
+      `Send tokens to the address above from any Sui wallet.\n\n` +
+      `💡 Required tokens:\n` +
+      `• SUI — Gas fees for all transactions\n` +
+      `• DEEP — Trading fees (lower fees than paying with base/quote)\n\n` +
+      `Get DEEP tokens from:\n` +
+      `• DeepBook website (deepbook.tech)\n` +
+      `• Sui DEXs (Cetus, Turbos, etc.)`,
     Markup.inlineKeyboard([
       [Markup.button.callback("💰 Wallet", "menu_wallet")],
       [Markup.button.callback("◀️ Main Menu", "back_main")],
@@ -1023,7 +1031,7 @@ async function handleWithdrawAction(ctx: BotContext): Promise<void> {
   await ctx.answerCbQuery?.().catch(() => {});
 
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.zklogin_address) {
     await ctx.reply(
@@ -1067,7 +1075,7 @@ async function handlePositionsMenu(ctx: BotContext): Promise<void> {
   await ctx.answerCbQuery?.().catch(() => {});
 
   const telegramId = ctx.from!.id.toString();
-  const positions = positionRepo.getAllByUser(telegramId);
+  const positions = await positionRepo.getAllByUser(telegramId);
 
   if (positions.length === 0) {
     try {
@@ -1129,7 +1137,7 @@ async function handleSettingsMenu(ctx: BotContext): Promise<void> {
   await ctx.answerCbQuery?.().catch(() => {});
 
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   let msg = `⚙️ Settings\n\n`;
 
@@ -1172,12 +1180,13 @@ async function handleHelpMenu(ctx: BotContext): Promise<void> {
   const msg =
     `❓ How to use Miru\n\n` +
     `1️⃣ Connect — Sign in with Google to create your non-custodial wallet\n\n` +
-    `2️⃣ Fund — Deposit SUI to your wallet for gas fees\n\n` +
+    `2️⃣ Fund — Deposit SUI (gas) and DEEP tokens (trading fees)\n\n` +
     `3️⃣ Browse — Explore DeepBook pools and discover top makers\n\n` +
     `4️⃣ Copy — Select a maker and choose your copy ratio\n\n` +
     `5️⃣ Earn — The bot automatically mirrors the maker's limit orders\n\n` +
     `6️⃣ Manage — View positions, stop copying, or withdraw anytime\n\n` +
     `💡 Tips:\n` +
+    `• Get DEEP tokens from deepbook.tech or Sui DEXs\n` +
     `• Start with a small ratio (10-25%) to test\n` +
     `• You control your funds — revoke bot access anytime\n` +
     `• Use the Wallet menu to deposit/withdraw\n\n` +
@@ -1239,7 +1248,7 @@ async function handleConnectFlow(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
 
   try {
-    const user = userRepo.getByTelegramId(telegramId);
+    const user = await userRepo.getByTelegramId(telegramId);
     if (user?.zklogin_address) {
       const valid = await zkLoginService.isSessionValid(telegramId);
       if (valid) {
@@ -1472,7 +1481,7 @@ async function processWithdrawInput(
     return;
   }
 
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
   if (!user?.zklogin_address) {
     await ctx.reply("⚠️ No wallet connected.");
     return;
@@ -1558,7 +1567,7 @@ async function handleAuthJwtCallback(ctx: BotContext): Promise<void> {
 
 async function handleWallet(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.zklogin_address) {
     await ctx.reply(
@@ -1592,7 +1601,8 @@ async function handleWallet(ctx: BotContext): Promise<void> {
       `Address:\n${user.zklogin_address}\n\n` +
       `Balance: ${balance}\n` +
       `Session: ${sessionStatus}\n` +
-      `Auth: Google (zkLogin)`,
+      `Auth: Google (zkLogin)\n\n` +
+      `💡 Need: SUI (gas) + DEEP (trading fees)`,
     Markup.inlineKeyboard([
       [
         Markup.button.callback("💳 Deposit", "wallet_deposit"),
@@ -1689,7 +1699,7 @@ async function handleDiscoverCommand(ctx: BotContext): Promise<void> {
 
 async function handleCopyCommand(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
   const args = getArgs(ctx);
 
   if (!user?.sui_address) {
@@ -1735,7 +1745,7 @@ async function handleCopyCommand(ctx: BotContext): Promise<void> {
 
 async function handlePositions(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const positions = positionRepo.getAllByUser(telegramId);
+  const positions = await positionRepo.getAllByUser(telegramId);
 
   if (positions.length === 0) {
     await ctx.reply(
@@ -1772,7 +1782,7 @@ async function handlePositions(ctx: BotContext): Promise<void> {
 async function handleStop(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
   const args = getArgs(ctx);
-  const activePositions = positionRepo.getActiveByUser(telegramId);
+  const activePositions = await positionRepo.getActiveByUser(telegramId);
 
   if (activePositions.length === 0) {
     await ctx.reply(
@@ -1851,7 +1861,7 @@ async function stopPosition(
 ): Promise<void> {
   try {
     const txDigest = await positionManager.pausePosition(positionId);
-    positionRepo.setActive(positionId, false);
+    await positionRepo.setActive(positionId, false);
 
     await ctx.reply(
       `✅ Position stopped!\n\n` +
@@ -1887,7 +1897,7 @@ async function handleStatus(ctx: BotContext): Promise<void> {
 
 async function handleBalance(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
 
   if (!user?.sui_address) {
     await ctx.reply(
@@ -1936,7 +1946,7 @@ async function handleLink(ctx: BotContext): Promise<void> {
   const args = getArgs(ctx);
 
   if (args.length === 0) {
-    const user = userRepo.getByTelegramId(telegramId);
+    const user = await userRepo.getByTelegramId(telegramId);
     if (user?.sui_address) {
       await ctx.reply(
         `🔗 Linked wallet: ${user.sui_address}\n\nTo change: /link <new_address>`,
@@ -1954,7 +1964,7 @@ async function handleLink(ctx: BotContext): Promise<void> {
     return;
   }
 
-  userRepo.linkWallet(telegramId, suiAddress);
+  await userRepo.linkWallet(telegramId, suiAddress);
   await ctx.reply(
     `✅ Wallet linked!\n\nAddress: ${truncateAddress(suiAddress)}`,
     Markup.inlineKeyboard([
@@ -1965,7 +1975,7 @@ async function handleLink(ctx: BotContext): Promise<void> {
 
 async function handleGrant(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
   const args = getArgs(ctx);
 
   if (!user?.zklogin_address) {
@@ -1986,7 +1996,7 @@ async function handleGrant(ctx: BotContext): Promise<void> {
   }
 
   const positionId = args[0];
-  const position = positionRepo.getById(positionId);
+  const position = await positionRepo.getById(positionId);
 
   if (!position || position.user_telegram_id !== telegramId) {
     await ctx.reply("❌ Position not found or doesn't belong to you.");
@@ -2014,7 +2024,7 @@ async function handleGrant(ctx: BotContext): Promise<void> {
     ).capabilityId;
 
     if (capabilityId) {
-      capabilityRepo.create({
+      await capabilityRepo.create({
         id: capabilityId,
         positionId,
         userTelegramId: telegramId,
@@ -2052,7 +2062,7 @@ async function handleGrantAction(ctx: BotContext): Promise<void> {
 
   try {
     await ctx.reply("⏳ Granting operator capability...");
-    const user = userRepo.getByTelegramId(telegramId);
+    const user = await userRepo.getByTelegramId(telegramId);
     if (!user?.zklogin_address) {
       await ctx.reply("⚠️ No wallet connected.");
       return;
@@ -2075,7 +2085,7 @@ async function handleGrantAction(ctx: BotContext): Promise<void> {
       result.objectChanges,
     ).capabilityId;
     if (capabilityId) {
-      capabilityRepo.create({
+      await capabilityRepo.create({
         id: capabilityId,
         positionId,
         userTelegramId: telegramId,
@@ -2101,7 +2111,7 @@ async function handleGrantAction(ctx: BotContext): Promise<void> {
 
 async function handleRevoke(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
   const args = getArgs(ctx);
 
   if (!user?.zklogin_address) {
@@ -2115,7 +2125,7 @@ async function handleRevoke(ctx: BotContext): Promise<void> {
   }
 
   if (args.length < 1) {
-    const caps = capabilityRepo.getByUser(telegramId);
+    const caps = await capabilityRepo.getByUser(telegramId);
     if (caps.length === 0) {
       await ctx.reply(
         "No active capabilities to revoke.",
@@ -2172,14 +2182,16 @@ async function revokeCapability(
   try {
     await ctx.reply("⏳ Revoking capability...");
 
-    const cap = capabilityRepo.getByPosition(capId) || { position_id: capId };
+    const cap = (await capabilityRepo.getByPosition(capId)) || {
+      position_id: capId,
+    };
     const positionId = (cap as any).position_id || capId;
     const result = await zkLoginService.signAndExecuteFull(
       telegramId,
       txBuilderService.buildRevokeCapability(capId, positionId),
     );
 
-    capabilityRepo.deactivate(capId);
+    await capabilityRepo.deactivate(capId);
 
     await ctx.reply(
       `✅ Capability revoked!\n\nTx: ${truncateAddress(result.digest)}`,
@@ -2201,7 +2213,7 @@ async function handleDeposit(ctx: BotContext): Promise<void> {
 
 async function handleWithdrawCommand(ctx: BotContext): Promise<void> {
   const telegramId = ctx.from!.id.toString();
-  const user = userRepo.getByTelegramId(telegramId);
+  const user = await userRepo.getByTelegramId(telegramId);
   const args = getArgs(ctx);
 
   if (!user?.zklogin_address) {
