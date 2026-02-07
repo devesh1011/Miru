@@ -22,6 +22,12 @@ import { suiService } from "../sui/client.js";
 import { mirrorEngine } from "../services/mirror-engine.js";
 import { zkLoginService } from "../services/zklogin.js";
 import { txBuilderService } from "../services/tx-builder.js";
+import { analyticsService } from "../services/analytics.js";
+import { riskManager } from "../services/risk-manager.js";
+import {
+  riskSettingsRepo,
+  notificationPrefsRepo,
+} from "../db/analytics-repository.js";
 import {
   getPools,
   getPoolSummaries,
@@ -202,6 +208,10 @@ export function registerCommands(bot: Telegraf<BotContext>): void {
   bot.command("auth", handleAuth);
   bot.command("deposit", handleDeposit);
   bot.command("withdraw", handleWithdrawCommand);
+  bot.command("setup_trading", handleSetupTrading);
+  bot.command("fund_trading", handleFundTrading);
+  bot.command("my_funds", handleMyFunds);
+  bot.command("test_trade", handleTestTrade);
 
   // ── Main menu button callbacks ──
   bot.action("menu_main", handleMainMenu);
@@ -238,6 +248,28 @@ export function registerCommands(bot: Telegraf<BotContext>): void {
   // ── Status ──
   bot.action("menu_status", handleStatusAction);
 
+  // ── Trading setup ──
+  bot.action("trading_setup", handleSetupTradingAction);
+  bot.action("trading_fund", handleFundTradingAction);
+  bot.action("trading_funds", handleMyFundsAction);
+  bot.action(/^fund_amount_(.+)$/, handleFundAmountCallback);
+  bot.action("trading_grant_cap", handleGrantTradeCapAction);
+  bot.action("trading_withdraw", handleWithdrawTradingAction);
+  bot.action(/^withdraw_all_(.+)$/, handleWithdrawAllCallback);
+  bot.action("trading_revoke_cap", handleRevokeTradeCapAction);
+  bot.action("trading_reset", handleResetTradingAction);
+  bot.action("trading_test", handleTestTradeAction);
+  bot.action(/^test_trade_(.+)$/, handleTestTradePoolCallback);
+  bot.action(/^test_side_(.+)_(BUY|SELL)$/, handleTestTradeSideCallback);
+
+  // ── Analytics & Risk ──
+  bot.action("menu_analytics", handleAnalyticsMenu);
+  bot.action("menu_risk", handleRiskMenu);
+  bot.action("menu_notifications", handleNotificationsMenu);
+  bot.action(/^notif_toggle_(.+)$/, handleNotifToggle);
+  bot.action(/^risk_set_(.+)$/, handleRiskSetting);
+  bot.action(/^analytics_pos_(.+)$/, handleAnalyticsPosition);
+
   // ── Back navigation ──
   bot.action("back_main", handleMainMenu);
 
@@ -260,10 +292,21 @@ function buildMainMenuKeyboard() {
       Markup.button.callback("📋 Positions", "menu_positions"),
     ],
     [
-      Markup.button.callback("📈 Status", "menu_status"),
+      Markup.button.callback("⚙️ Setup Trading", "trading_setup"),
+      Markup.button.callback("💵 My Funds", "trading_funds"),
+    ],
+    [
+      Markup.button.callback("📈 Analytics", "menu_analytics"),
+      Markup.button.callback("🛡️ Risk", "menu_risk"),
+    ],
+    [
+      Markup.button.callback("🔔 Notifications", "menu_notifications"),
       Markup.button.callback("⚙️ Settings", "menu_settings"),
     ],
-    [Markup.button.callback("❓ Help", "menu_help")],
+    [
+      Markup.button.callback("📡 Status", "menu_status"),
+      Markup.button.callback("❓ Help", "menu_help"),
+    ],
   ]);
 }
 
@@ -427,7 +470,8 @@ async function handlePoolsMenu(ctx: BotContext): Promise<void> {
 
     let msg = `📊 DeepBook Pools (${pools.length})\n\n`;
 
-    const displayPools = pools.slice(0, 10);
+    // Show all pools (no pagination needed for <50 pools)
+    const displayPools = pools;
     for (const pool of displayPools) {
       const s = summaryMap.get(pool.pool_name);
       msg += `• ${pool.pool_name}`;
@@ -441,12 +485,9 @@ async function handlePoolsMenu(ctx: BotContext): Promise<void> {
       msg += `\n`;
     }
 
-    if (pools.length > 10) {
-      msg += `\n...and ${pools.length - 10} more\n`;
-    }
-
     msg += `\nTap a pool to discover top makers:`;
 
+    // Create buttons for all pools
     const buttons = displayPools.map((pool) => [
       Markup.button.callback(
         `🔍 ${pool.pool_name}`,
@@ -790,6 +831,20 @@ async function executeCopy(
       }
 
       const balanceManagerKey = user.balance_manager_key || "MANAGER_1";
+
+      // Use the user-specific manager key for the mirror engine
+      const userManagerKey = `USER_${telegramId}`;
+
+      // Ensure the user's BM + TradeCap is registered with the global SDK
+      if (user.balance_manager_id && user.trade_cap_id) {
+        suiService.reinitialize({
+          [userManagerKey]: {
+            address: user.balance_manager_id,
+            tradeCap: user.trade_cap_id,
+          },
+        });
+      }
+
       await positionRepo.create({
         id: positionId,
         userTelegramId: telegramId,
@@ -797,7 +852,7 @@ async function executeCopy(
         poolKey: poolKey.toUpperCase(),
         poolId,
         ratio,
-        balanceManagerKey,
+        balanceManagerKey: userManagerKey,
       });
 
       if (capabilityId) {
@@ -818,7 +873,7 @@ async function executeCopy(
         poolKey: poolKey.toUpperCase(),
         ratio,
         active: true,
-        balanceManagerKey,
+        balanceManagerKey: userManagerKey,
         capabilityId: capabilityId || undefined,
       });
 
@@ -1104,9 +1159,26 @@ async function handlePositionsMenu(ctx: BotContext): Promise<void> {
 
   for (const pos of positions) {
     const status = pos.is_active ? "🟢" : "🔴";
+
+    // Fetch P&L data for each position
+    let pnlLine = "";
+    try {
+      const analytics = await analyticsService.getPositionAnalytics(pos.id);
+      if (analytics && analytics.winCount + analytics.lossCount > 0) {
+        const pnlSign = analytics.totalPnl >= 0 ? "+" : "";
+        const pnlColor = analytics.totalPnl >= 0 ? "📗" : "📕";
+        const totalOrders = analytics.winCount + analytics.lossCount;
+        pnlLine = `   ${pnlColor} P&L: ${pnlSign}$${analytics.totalPnl.toFixed(2)} (${pnlSign}${analytics.totalPnlPercent.toFixed(1)}%) | Win: ${analytics.winCount}/${totalOrders}\n`;
+      }
+    } catch {
+      /* ignore analytics errors */
+    }
+
     msg +=
       `${status} ${pos.pool_key} — ${truncateAddress(pos.target_maker)} — ${pos.ratio}%\n` +
-      `   Orders: ${pos.total_orders_placed} | ID: ${truncateAddress(pos.id)}\n\n`;
+      `   Orders: ${pos.total_orders_placed} | ID: ${truncateAddress(pos.id)}\n` +
+      pnlLine +
+      `\n`;
 
     if (pos.is_active) {
       const cacheKey = cachePositionId(pos.id);
@@ -1156,6 +1228,8 @@ async function handleSettingsMenu(ctx: BotContext): Promise<void> {
       msg,
       Markup.inlineKeyboard([
         [Markup.button.callback("💰 Wallet", "menu_wallet")],
+        [Markup.button.callback("🛡️ Risk Management", "menu_risk")],
+        [Markup.button.callback("🔔 Notifications", "menu_notifications")],
         [Markup.button.callback("◀️ Back", "back_main")],
       ]),
     );
@@ -1164,6 +1238,8 @@ async function handleSettingsMenu(ctx: BotContext): Promise<void> {
       msg,
       Markup.inlineKeyboard([
         [Markup.button.callback("💰 Wallet", "menu_wallet")],
+        [Markup.button.callback("🛡️ Risk Management", "menu_risk")],
+        [Markup.button.callback("🔔 Notifications", "menu_notifications")],
         [Markup.button.callback("◀️ Back", "back_main")],
       ]),
     );
@@ -1331,6 +1407,10 @@ async function handleTextInput(ctx: BotContext): Promise<void> {
 
     case "withdraw_amount":
       await processWithdrawInput(ctx, telegramId, text);
+      break;
+
+    case "risk_setting":
+      await processRiskSettingInput(ctx, telegramId, text, conv.data);
       break;
 
     default:
@@ -1525,6 +1605,90 @@ async function processWithdrawInput(
       `❌ Withdrawal failed: ${extractErrorMessage(error)}`,
       Markup.inlineKeyboard([
         [Markup.button.callback("💰 Wallet", "menu_wallet")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RISK SETTING INPUT HANDLER
+// ══════════════════════════════════════════════
+
+async function processRiskSettingInput(
+  ctx: BotContext,
+  telegramId: string,
+  text: string,
+  data: Record<string, any>,
+): Promise<void> {
+  clearConversation(telegramId);
+
+  const value = parseFloat(text);
+  if (isNaN(value) || value < 0) {
+    await ctx.reply(
+      `❌ Invalid value. Please enter a non-negative number.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🛡️ Risk Settings", "menu_risk")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  const setting = data.setting as string;
+
+  const fieldMap: Record<string, string> = {
+    stop_loss: "stopLossPercent",
+    take_profit: "takeProfitPercent",
+    max_order: "maxOrderSize",
+    daily_limit: "dailyTradeLimit",
+    max_positions: "maxOpenPositions",
+    min_balance: "minBalanceThreshold",
+  };
+
+  const field = fieldMap[setting];
+  if (!field) {
+    await ctx.reply(`⚠️ Unknown setting.`);
+    return;
+  }
+
+  try {
+    const updateData: Record<string, number> = {};
+    // For integer fields, round
+    if (field === "dailyTradeLimit" || field === "maxOpenPositions") {
+      updateData[field] = Math.round(value);
+    } else {
+      updateData[field] = value;
+    }
+
+    await riskSettingsRepo.upsert({
+      userTelegramId: telegramId,
+      positionId: null,
+      ...updateData,
+    });
+
+    const names: Record<string, string> = {
+      stop_loss: "Stop Loss",
+      take_profit: "Take Profit",
+      max_order: "Max Order Size",
+      daily_limit: "Daily Trade Limit",
+      max_positions: "Max Open Positions",
+      min_balance: "Min Balance Threshold",
+    };
+
+    await ctx.reply(
+      `✅ ${names[setting] || setting} updated to ${value}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🛡️ Risk Settings", "menu_risk")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("[Bot] Risk setting update error:", error);
+    await ctx.reply(
+      `❌ Failed to update setting.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🛡️ Risk Settings", "menu_risk")],
         [Markup.button.callback("◀️ Main Menu", "back_main")],
       ]),
     );
@@ -1860,7 +2024,11 @@ async function stopPosition(
   positionId: string,
 ): Promise<void> {
   try {
-    const txDigest = await positionManager.pausePosition(positionId);
+    const telegramId = ctx.from!.id.toString();
+    const txDigest = await positionManager.pausePosition(
+      positionId,
+      telegramId,
+    );
     await positionRepo.setActive(positionId, false);
 
     await ctx.reply(
@@ -2276,6 +2444,1449 @@ function extractCreatedObjects(objectChanges?: any[]): {
 function getArgs(ctx: BotContext): string[] {
   const text = (ctx.message as any)?.text || "";
   return text.split(/\s+/).slice(1);
+}
+
+// ══════════════════════════════════════════════
+//  ANALYTICS MENU
+// ══════════════════════════════════════════════
+
+async function handleAnalyticsMenu(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const telegramId = ctx.from!.id.toString();
+
+  try {
+    // Portfolio summary
+    const summary = await analyticsService.getPortfolioSummary(telegramId);
+
+    if (!summary || summary.activePositions === 0) {
+      try {
+        await ctx.editMessageText(
+          `📈 Analytics\n\nNo positions yet — start copy trading to see your analytics!`,
+          Markup.inlineKeyboard([
+            [Markup.button.callback("🪞 Copy Trading", "menu_copy_trading")],
+            [Markup.button.callback("◀️ Back", "back_main")],
+          ]),
+        );
+      } catch {
+        await ctx.reply(`📈 Analytics\n\nNo positions yet.`);
+      }
+      return;
+    }
+
+    const display = analyticsService.formatPortfolioDisplay(summary);
+
+    // Position detail buttons
+    const positions = await positionRepo.getAllByUser(telegramId);
+    const buttons: ReturnType<typeof Markup.button.callback>[][] = [];
+
+    for (const pos of positions) {
+      const cacheKey = cachePositionId(pos.id);
+      buttons.push([
+        Markup.button.callback(
+          `📊 ${pos.pool_key} (${truncateAddress(pos.target_maker)})`,
+          `analytics_pos_${cacheKey}`,
+        ),
+      ]);
+    }
+
+    buttons.push([Markup.button.callback("◀️ Back", "back_main")]);
+
+    try {
+      await ctx.editMessageText(display, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard(buttons),
+      });
+    } catch {
+      await ctx.reply(display, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard(buttons),
+      });
+    }
+  } catch (error) {
+    console.error("[Bot] Analytics menu error:", error);
+    try {
+      await ctx.editMessageText(
+        `📈 Analytics\n\n⚠️ Could not load analytics. Try again later.`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback("◀️ Back", "back_main")],
+        ]),
+      );
+    } catch {
+      await ctx.reply(`⚠️ Could not load analytics.`);
+    }
+  }
+}
+
+async function handleAnalyticsPosition(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const match = (ctx as any).match;
+  const cacheKey = match?.[1];
+  const positionId = cacheKey ? getPositionId(cacheKey) : null;
+
+  if (!positionId) {
+    try {
+      await ctx.editMessageText(
+        `⚠️ Position expired. Go back and try again.`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback("📈 Analytics", "menu_analytics")],
+          [Markup.button.callback("◀️ Back", "back_main")],
+        ]),
+      );
+    } catch {
+      await ctx.reply(`⚠️ Position expired.`);
+    }
+    return;
+  }
+
+  try {
+    const analytics = await analyticsService.getPositionAnalytics(positionId);
+    const position = await positionRepo.getById(positionId);
+
+    if (!analytics || !position) {
+      try {
+        await ctx.editMessageText(
+          `⚠️ No analytics data for this position yet.`,
+          Markup.inlineKeyboard([
+            [Markup.button.callback("📈 Analytics", "menu_analytics")],
+            [Markup.button.callback("◀️ Back", "back_main")],
+          ]),
+        );
+      } catch {}
+      return;
+    }
+
+    const display = analyticsService.formatPnlDisplay(analytics);
+    const msg =
+      `📊 <b>Position Analytics</b>\n\n` +
+      `Pool: ${position.pool_key}\n` +
+      `Maker: <code>${truncateAddress(position.target_maker)}</code>\n` +
+      `Ratio: ${position.ratio}%\n\n` +
+      display;
+
+    try {
+      await ctx.editMessageText(msg, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard([
+          [Markup.button.callback("📈 Portfolio", "menu_analytics")],
+          [Markup.button.callback("◀️ Back", "back_main")],
+        ]),
+      });
+    } catch {
+      await ctx.reply(msg, { parse_mode: "HTML" });
+    }
+  } catch (error) {
+    console.error("[Bot] Position analytics error:", error);
+    await ctx.reply(`⚠️ Could not load position analytics.`);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RISK MANAGEMENT MENU
+// ══════════════════════════════════════════════
+
+async function handleRiskMenu(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const telegramId = ctx.from!.id.toString();
+
+  try {
+    const settings = await riskManager.getUserRiskSettings(telegramId);
+    const display = riskManager.formatRiskDisplay(settings);
+
+    const buttons = [
+      [
+        Markup.button.callback("✏️ Stop Loss %", "risk_set_stop_loss"),
+        Markup.button.callback("✏️ Take Profit %", "risk_set_take_profit"),
+      ],
+      [
+        Markup.button.callback("✏️ Max Order $", "risk_set_max_order"),
+        Markup.button.callback("✏️ Daily Limit", "risk_set_daily_limit"),
+      ],
+      [
+        Markup.button.callback("✏️ Max Positions", "risk_set_max_positions"),
+        Markup.button.callback("✏️ Min Balance", "risk_set_min_balance"),
+      ],
+      [
+        Markup.button.callback(
+          `${settings.autoPauseOnLoss ? "✅" : "❌"} Auto-Pause`,
+          "risk_set_auto_pause",
+        ),
+      ],
+      [Markup.button.callback("◀️ Back", "back_main")],
+    ];
+
+    try {
+      await ctx.editMessageText(display, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard(buttons),
+      });
+    } catch {
+      await ctx.reply(display, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard(buttons),
+      });
+    }
+  } catch (error) {
+    console.error("[Bot] Risk menu error:", error);
+    await ctx.reply(`⚠️ Could not load risk settings.`);
+  }
+}
+
+async function handleRiskSetting(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const telegramId = ctx.from!.id.toString();
+  const match = (ctx as any).match;
+  const setting = match?.[1];
+
+  if (!setting) return;
+
+  // Toggle auto-pause immediately
+  if (setting === "auto_pause") {
+    try {
+      const current = await riskManager.getUserRiskSettings(telegramId);
+      await riskSettingsRepo.upsert({
+        userTelegramId: telegramId,
+        positionId: null,
+        autoPauseOnLoss: !current.autoPauseOnLoss,
+      });
+      // Refresh the menu
+      await handleRiskMenu(ctx);
+    } catch (error) {
+      await ctx.reply(`⚠️ Could not toggle auto-pause.`);
+    }
+    return;
+  }
+
+  // For other settings, prompt for a value
+  const settingNames: Record<string, string> = {
+    stop_loss: "Stop Loss percentage (e.g., 15 for -15%)",
+    take_profit: "Take Profit percentage (e.g., 30 for +30%)",
+    max_order: "Maximum order size in $ (e.g., 100)",
+    daily_limit: "Maximum trades per day (e.g., 50)",
+    max_positions: "Maximum open positions (e.g., 10)",
+    min_balance: "Minimum SUI balance threshold (e.g., 0.5)",
+  };
+
+  const prompt = settingNames[setting];
+  if (!prompt) return;
+
+  setConversation(telegramId, "risk_setting", { setting });
+
+  try {
+    await ctx.editMessageText(
+      `🛡️ Enter new value:\n\n${prompt}\n\nSend a number:`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("❌ Cancel", "menu_risk")],
+      ]),
+    );
+  } catch {
+    await ctx.reply(`🛡️ Enter new value:\n\n${prompt}\n\nSend a number:`);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  NOTIFICATIONS MENU
+// ══════════════════════════════════════════════
+
+async function handleNotificationsMenu(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const telegramId = ctx.from!.id.toString();
+
+  try {
+    const prefs = await notificationPrefsRepo.getOrCreate(telegramId);
+
+    const emoji = (on: boolean) => (on ? "✅" : "❌");
+
+    const msg =
+      `🔔 <b>Notification Preferences</b>\n\n` +
+      `Tap a toggle to turn notifications on/off:\n\n` +
+      `${emoji(prefs.order_executed)} Order Executed\n` +
+      `${emoji(prefs.position_created)} Position Created\n` +
+      `${emoji(prefs.stop_loss_alerts)} Stop Loss Triggered\n` +
+      `${emoji(prefs.take_profit_alerts)} Take Profit Hit\n` +
+      `${emoji(prefs.balance_low_alerts)} Low Balance Warning\n` +
+      `${emoji(prefs.daily_summary)} Daily Summary\n` +
+      `${emoji(prefs.risk_limit_alerts)} Risk Limit Reached\n` +
+      `${emoji(prefs.maker_performance_alerts)} Maker Performance Alerts`;
+
+    const buttons = [
+      [
+        Markup.button.callback(
+          `${emoji(prefs.order_executed)} Orders`,
+          "notif_toggle_order_executed",
+        ),
+        Markup.button.callback(
+          `${emoji(prefs.position_created)} Created`,
+          "notif_toggle_position_created",
+        ),
+      ],
+      [
+        Markup.button.callback(
+          `${emoji(prefs.stop_loss_alerts)} Stop Loss`,
+          "notif_toggle_stop_loss_alerts",
+        ),
+        Markup.button.callback(
+          `${emoji(prefs.take_profit_alerts)} Take Profit`,
+          "notif_toggle_take_profit_alerts",
+        ),
+      ],
+      [
+        Markup.button.callback(
+          `${emoji(prefs.balance_low_alerts)} Low Balance`,
+          "notif_toggle_balance_low_alerts",
+        ),
+        Markup.button.callback(
+          `${emoji(prefs.daily_summary)} Daily Summary`,
+          "notif_toggle_daily_summary",
+        ),
+      ],
+      [
+        Markup.button.callback(
+          `${emoji(prefs.risk_limit_alerts)} Risk Limits`,
+          "notif_toggle_risk_limit_alerts",
+        ),
+        Markup.button.callback(
+          `${emoji(prefs.maker_performance_alerts)} Maker Perf`,
+          "notif_toggle_maker_performance_alerts",
+        ),
+      ],
+      [Markup.button.callback("◀️ Back", "back_main")],
+    ];
+
+    try {
+      await ctx.editMessageText(msg, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard(buttons),
+      });
+    } catch {
+      await ctx.reply(msg, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard(buttons),
+      });
+    }
+  } catch (error) {
+    console.error("[Bot] Notifications menu error:", error);
+    await ctx.reply(`⚠️ Could not load notification preferences.`);
+  }
+}
+
+async function handleNotifToggle(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const telegramId = ctx.from!.id.toString();
+  const match = (ctx as any).match;
+  const prefKey = match?.[1];
+
+  if (!prefKey) return;
+
+  try {
+    const prefs = await notificationPrefsRepo.getOrCreate(telegramId);
+    const currentValue = (prefs as any)[prefKey] ?? true;
+    await notificationPrefsRepo.togglePref(
+      telegramId,
+      prefKey as any,
+      !currentValue,
+    );
+    // Refresh the menu to show updated state
+    await handleNotificationsMenu(ctx);
+  } catch (error) {
+    console.error("[Bot] Notification toggle error:", error);
+    await ctx.reply(`⚠️ Could not update notification preference.`);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  DEMO MODE
+// ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+//  TRADING SETUP — BalanceManager + Deposit + Funds
+// ══════════════════════════════════════════════
+
+async function handleSetupTrading(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user) {
+    await ctx.reply(
+      "⚠️ Please /start first.",
+      Markup.inlineKeyboard([
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  // Check if already has a balance manager
+  if (user.balance_manager_id) {
+    const tradeCapStatus = user.trade_cap_id
+      ? `✅ Bot authorized (TradeCap: ${truncateAddress(user.trade_cap_id)})`
+      : `⚠️ Bot not yet authorized — grant TradeCap to enable mirroring`;
+    await ctx.reply(
+      `✅ Trading already set up!\n\n` +
+        `📦 BalanceManager: ${truncateAddress(user.balance_manager_id)}\n` +
+        `👤 Owner: You (${truncateAddress(user.zklogin_address || "unknown")})\n` +
+        `${tradeCapStatus}\n\n` +
+        `Next: Fund your trading account, then authorize the bot.\n\n` +
+        `⚠️ If deposit fails with "validate_owner", your BM was created\n` +
+        `by the old code. Use Reset to recreate it with zkLogin.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("💰 Fund Trading", "trading_fund")],
+        [Markup.button.callback("🤖 Authorize Bot", "trading_grant_cap")],
+        [Markup.button.callback("📊 Check Funds", "trading_funds")],
+        [Markup.button.callback("🔄 Reset Trading", "trading_reset")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  // Verify zkLogin session exists
+  if (!user.zklogin_address || !user.zk_proof) {
+    await ctx.reply(
+      `⚠️ You need to connect via zkLogin first.\n\n` +
+        `Use /connect to sign in with Google. This creates your\n` +
+        `non-custodial wallet that will own your trading account.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔐 Connect Wallet", "wallet_connect")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  // Verify zkLogin session is not expired
+  const sessionValid = await zkLoginService.isSessionValid(telegramId);
+  if (!sessionValid) {
+    await ctx.reply(
+      `⚠️ Your zkLogin session has expired.\n\nPlease /connect again to refresh.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔐 Connect Wallet", "wallet_connect")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  await ctx.reply(
+    `⚙️ Setting up Non-Custodial Trading Account...\n\n` +
+      `This creates a BalanceManager on-chain owned by YOUR wallet.\n` +
+      `Only you can deposit/withdraw. The bot can only trade.\n\n` +
+      `Cost: ~0.003 SUI from your zkLogin wallet\n\n` +
+      `⏳ Signing with zkLogin...`,
+  );
+
+  try {
+    // Create BalanceManager via zkLogin — USER signs, so USER owns it
+    // Use user-context SDK so Move calls are generated with correct address
+    const userDb = suiService.createUserContext(user.zklogin_address);
+
+    const result = await zkLoginService.signAndExecuteFull(telegramId, (tx) => {
+      tx.add(userDb.balanceManager.createAndShareBalanceManager());
+    });
+
+    // Extract BalanceManager ID from objectChanges
+    const bmCreated = result.objectChanges?.find(
+      (c: any) =>
+        c.type === "created" && c.objectType?.includes("BalanceManager"),
+    );
+
+    if (!bmCreated || !(bmCreated as any).objectId) {
+      throw new Error(
+        "BalanceManager not found in transaction result. Tx: " + result.digest,
+      );
+    }
+
+    const balanceManagerId = (bmCreated as any).objectId;
+    const managerKey = "MANAGER_1";
+
+    // Save to user record
+    await userRepo.setBalanceManager(telegramId, balanceManagerId, managerKey);
+
+    await ctx.reply(
+      `✅ Non-Custodial Trading Account Created!\n\n` +
+        `📦 BalanceManager: ${truncateAddress(balanceManagerId)}\n` +
+        `👤 Owner: YOU (${truncateAddress(user.zklogin_address)})\n` +
+        `🔗 Tx: ${truncateAddress(result.digest)}\n` +
+        `🔗 Explorer: https://suiscan.xyz/mainnet/tx/${result.digest}\n\n` +
+        `✨ This account is truly non-custodial:\n` +
+        `• Only YOU can deposit & withdraw\n` +
+        `• The bot CANNOT touch your funds\n\n` +
+        `Next: Deposit tokens, then authorize the bot to trade.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("💰 Fund Trading", "trading_fund")],
+        [Markup.button.callback("🤖 Authorize Bot", "trading_grant_cap")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("Error creating balance manager:", error);
+    const errMsg = extractErrorMessage(error);
+
+    let hint = "";
+    if (/insufficient|balance|gas/i.test(errMsg)) {
+      hint =
+        "\n\n💡 Your zkLogin wallet needs SUI for gas. Send some SUI to your wallet address first.";
+    } else if (/session|expired|epoch/i.test(errMsg)) {
+      hint =
+        "\n\n💡 Your zkLogin session may have expired. Try /connect again.";
+    }
+
+    await ctx.reply(
+      `❌ Failed to create trading account.\n\n${errMsg}${hint}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Retry", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+async function handleSetupTradingAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleSetupTrading(ctx);
+}
+
+async function handleResetTradingAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleResetTrading(ctx);
+}
+
+/**
+ * Reset trading: clears the stale BalanceManager from DB so the user
+ * can recreate it with the new zkLogin-signed flow.
+ * Needed when BM was created by the old backend-signed code.
+ */
+async function handleResetTrading(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user?.balance_manager_id) {
+    await ctx.reply(
+      `ℹ️ No trading account to reset. Use Setup Trading to create one.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("⚙️ Setup Trading", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  try {
+    const oldBmId = user.balance_manager_id;
+
+    // Clear BM and TradeCap from DB
+    await userRepo.setBalanceManager(telegramId, "", "");
+    if (user.trade_cap_id) {
+      await userRepo.clearTradeCap(telegramId);
+    }
+
+    await ctx.reply(
+      `🔄 Trading account reset!\n\n` +
+        `Old BalanceManager ${truncateAddress(oldBmId)} removed from your profile.\n` +
+        `(The on-chain object still exists but is no longer tracked.)\n\n` +
+        `Now tap Setup Trading to create a new one owned by YOUR zkLogin wallet.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("⚙️ Setup Trading", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("Error resetting trading:", error);
+    const errMsg = extractErrorMessage(error);
+    await ctx.reply(
+      `❌ Reset failed.\n\n${errMsg}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+async function handleFundTrading(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user?.balance_manager_id) {
+    await ctx.reply(
+      `⚠️ No trading account found.\n\nSet up trading first.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("⚙️ Setup Trading", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  // Verify zkLogin session
+  if (!user.zklogin_address || !user.zk_proof) {
+    await ctx.reply(
+      `⚠️ zkLogin session not found. Please /connect first.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔐 Connect Wallet", "wallet_connect")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  const sessionValid = await zkLoginService.isSessionValid(telegramId);
+  if (!sessionValid) {
+    await ctx.reply(
+      `⚠️ Your zkLogin session has expired.\n\nPlease /connect again.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔐 Connect Wallet", "wallet_connect")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  const args = getArgs(ctx);
+
+  if (args.length >= 1) {
+    // Direct: /fund_trading 0.5
+    const amount = parseFloat(args[0]);
+    const coinKey = args[1]?.toUpperCase() || "SUI";
+
+    if (isNaN(amount) || amount <= 0) {
+      await ctx.reply("❌ Invalid amount. Example: /fund_trading 0.5");
+      return;
+    }
+
+    await executeFundTrading(ctx, telegramId, amount, coinKey);
+    return;
+  }
+
+  // Show preset buttons
+  await ctx.reply(
+    `💰 Fund Trading Account (Non-Custodial)\n\n` +
+      `📦 BalanceManager: ${truncateAddress(user.balance_manager_id)}\n` +
+      `👤 Owner: You\n\n` +
+      `Select amount of SUI to deposit from your zkLogin wallet:`,
+    Markup.inlineKeyboard([
+      [
+        Markup.button.callback("0.1 SUI", "fund_amount_0.1"),
+        Markup.button.callback("0.25 SUI", "fund_amount_0.25"),
+      ],
+      [
+        Markup.button.callback("0.5 SUI", "fund_amount_0.5"),
+        Markup.button.callback("1.0 SUI", "fund_amount_1.0"),
+      ],
+      [Markup.button.callback("◀️ Back", "back_main")],
+    ]),
+  );
+}
+
+async function handleFundTradingAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleFundTrading(ctx);
+}
+
+async function handleFundAmountCallback(ctx: BotContext): Promise<void> {
+  const match = (ctx as any).match;
+  if (!match || !match[1]) return;
+
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const amount = parseFloat(match[1]);
+  const telegramId = ctx.from!.id.toString();
+
+  await executeFundTrading(ctx, telegramId, amount, "SUI");
+}
+
+async function executeFundTrading(
+  ctx: BotContext,
+  telegramId: string,
+  amount: number,
+  coinKey: string,
+): Promise<void> {
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (
+    !user?.balance_manager_id ||
+    !user?.balance_manager_key ||
+    !user?.zklogin_address
+  ) {
+    await ctx.reply("⚠️ Run /setup_trading first and connect via zkLogin.");
+    return;
+  }
+
+  await ctx.reply(
+    `💰 Depositing ${amount} ${coinKey} into your trading account...\n\n` +
+      `👤 From: Your zkLogin wallet\n` +
+      `📦 To: Your BalanceManager\n\n` +
+      `⏳ Signing with zkLogin...`,
+  );
+
+  try {
+    // Create user-context SDK for building the deposit tx
+    // CRITICAL: Use user's zkLogin address so SDK generates Move calls with correct sender
+    const managerKey = "MANAGER_1";
+    const userDb = suiService.createUserContext(user.zklogin_address, {
+      [managerKey]: {
+        address: user.balance_manager_id,
+      },
+    });
+
+    // User signs the deposit — funds move from user's wallet to user's BM
+    const result = await zkLoginService.signAndExecuteFull(telegramId, (tx) => {
+      tx.add(
+        userDb.balanceManager.depositIntoManager(managerKey, coinKey, amount),
+      );
+    });
+
+    const hasTradeCapButton = !user.trade_cap_id
+      ? [[Markup.button.callback("🤖 Authorize Bot", "trading_grant_cap")]]
+      : [];
+
+    await ctx.reply(
+      `✅ Deposit Successful!\n\n` +
+        `💰 Amount: ${amount} ${coinKey}\n` +
+        `📦 BalanceManager: ${truncateAddress(user.balance_manager_id)}\n` +
+        `👤 Owner: You (only you can withdraw)\n` +
+        `🔗 Tx: ${truncateAddress(result.digest)}\n` +
+        `🔗 Explorer: https://suiscan.xyz/mainnet/tx/${result.digest}\n\n` +
+        (user.trade_cap_id
+          ? `✅ Bot is already authorized. Start copying a maker!`
+          : `Next: Authorize the bot to mirror trades on your behalf.`),
+      Markup.inlineKeyboard([
+        ...hasTradeCapButton,
+        [Markup.button.callback("📊 Browse Pools", "menu_pools")],
+        [Markup.button.callback("📊 Check Funds", "trading_funds")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("Error depositing:", error);
+    const errMsg = extractErrorMessage(error);
+
+    let hint = "";
+    if (/insufficient|balance/i.test(errMsg)) {
+      hint = `\n\n💡 Your zkLogin wallet may not have enough ${coinKey}.`;
+    } else if (/gas/i.test(errMsg)) {
+      hint = `\n\n💡 Not enough SUI for gas fees in your zkLogin wallet.`;
+    } else if (/session|expired|epoch/i.test(errMsg)) {
+      hint =
+        "\n\n💡 Your zkLogin session may have expired. Try /connect again.";
+    }
+
+    await ctx.reply(
+      `❌ Deposit failed.\n\n${errMsg}${hint}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Retry", "trading_fund")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+async function handleMyFunds(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user?.balance_manager_id || !user?.balance_manager_key) {
+    await ctx.reply(
+      `⚠️ No trading account found.\n\nRun /setup_trading first.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("⚙️ Setup Trading", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  await ctx.reply("📊 Fetching trading balances...");
+
+  try {
+    // Ensure the user's BM is registered with the global SDK for balance queries
+    const userManagerKey = `USER_${telegramId}`;
+    suiService.reinitialize({
+      [userManagerKey]: {
+        address: user.balance_manager_id,
+        tradeCap: user.trade_cap_id || undefined,
+      },
+    });
+
+    const managerKey = userManagerKey;
+
+    // Query balances for common coins
+    const coinKeys = ["SUI", "DEEP", "USDC"];
+    const balances: { coin: string; balance: number }[] = [];
+
+    for (const coinKey of coinKeys) {
+      try {
+        const result = await deepBookService.getManagerBalance(
+          managerKey,
+          coinKey,
+        );
+        balances.push({ coin: coinKey, balance: result.balance });
+      } catch {
+        // Coin might not be registered, skip
+        balances.push({ coin: coinKey, balance: 0 });
+      }
+    }
+
+    // Also get wallet balance
+    let walletBalance = "N/A";
+    try {
+      const addr = user.zklogin_address || suiService.getAddress();
+      const rawBal = await suiService.getBalance(addr);
+      walletBalance = (parseInt(rawBal) / 1_000_000_000).toFixed(4) + " SUI";
+    } catch {
+      /* ignore */
+    }
+
+    let msg =
+      `📊 Trading Account Funds\n\n` +
+      `📦 BalanceManager: ${truncateAddress(user.balance_manager_id)}\n\n` +
+      `── DeepBook Balances ──\n`;
+
+    for (const b of balances) {
+      const icon = b.balance > 0 ? "✅" : "⬜";
+      msg += `${icon} ${b.coin}: ${b.balance > 0 ? b.balance.toFixed(6) : "0"}\n`;
+    }
+
+    msg += `\n── Wallet Balance ──\n💰 ${walletBalance}\n`;
+
+    const hasFunds = balances.some((b) => b.balance > 0);
+
+    if (!hasFunds) {
+      msg +=
+        `\n⚠️ No funds deposited yet!\n` +
+        `Deposit tokens to start mirroring trades.`;
+    } else if (!user.trade_cap_id) {
+      msg +=
+        `\n⚠️ Bot not authorized yet.\n` +
+        `Grant TradeCap so Miru can mirror trades.`;
+    } else {
+      msg += `\n✅ Ready to mirror trades!`;
+    }
+
+    const buttons = [];
+    if (!hasFunds) {
+      buttons.push([Markup.button.callback("💰 Fund Trading", "trading_fund")]);
+    }
+    if (!user.trade_cap_id) {
+      buttons.push([
+        Markup.button.callback("🤖 Authorize Bot", "trading_grant_cap"),
+      ]);
+    }
+    buttons.push([
+      Markup.button.callback("📤 Withdraw", "trading_withdraw"),
+      Markup.button.callback("📊 Browse Pools", "menu_pools"),
+    ]);
+    if (user.trade_cap_id) {
+      buttons.push([
+        Markup.button.callback("🧪 Test Trade", "trading_test"),
+        Markup.button.callback("🚫 Revoke Bot", "trading_revoke_cap"),
+      ]);
+    }
+    buttons.push([Markup.button.callback("◀️ Main Menu", "back_main")]);
+
+    await ctx.reply(msg, Markup.inlineKeyboard(buttons));
+  } catch (error) {
+    console.error("Error fetching balances:", error);
+    const errMsg = extractErrorMessage(error);
+    await ctx.reply(
+      `❌ Failed to fetch balances.\n\n${errMsg}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Retry", "trading_funds")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+async function handleMyFundsAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleMyFunds(ctx);
+}
+
+// ══════════════════════════════════════════════
+//  GRANT TRADE CAP — Authorize bot to mirror-trade
+// ══════════════════════════════════════════════
+
+async function handleGrantTradeCap(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user?.balance_manager_id || !user?.zklogin_address) {
+    await ctx.reply(
+      `⚠️ Set up trading first.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("⚙️ Setup Trading", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  if (user.trade_cap_id) {
+    await ctx.reply(
+      `✅ Bot is already authorized!\n\n` +
+        `🔑 TradeCap: ${truncateAddress(user.trade_cap_id)}\n\n` +
+        `The bot can mirror trades on your BalanceManager.\n` +
+        `It cannot deposit or withdraw your funds.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("📊 Browse Pools", "menu_pools")],
+        [Markup.button.callback("🚫 Revoke Bot", "trading_revoke_cap")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  // Verify zkLogin session
+  const sessionValid = await zkLoginService.isSessionValid(telegramId);
+  if (!sessionValid) {
+    await ctx.reply(
+      `⚠️ zkLogin session expired. Please /connect again.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔐 Connect Wallet", "wallet_connect")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  const botAddress = suiService.getAddress();
+
+  await ctx.reply(
+    `🤖 Authorizing Miru Bot...\n\n` +
+      `This mints a TradeCap and gives it to the bot.\n\n` +
+      `✅ Bot CAN: place & cancel orders (mirroring)\n` +
+      `❌ Bot CANNOT: deposit, withdraw, or transfer\n\n` +
+      `Bot address: ${truncateAddress(botAddress)}\n` +
+      `Cost: ~0.002 SUI\n\n` +
+      `⏳ Signing with zkLogin...`,
+  );
+
+  try {
+    // Build user-context SDK
+    const managerKey = "MANAGER_1";
+    const userDb = suiService.createUserContext(user.zklogin_address, {
+      [managerKey]: {
+        address: user.balance_manager_id,
+      },
+    });
+
+    // User signs: mint TradeCap + transfer to bot
+    const result = await zkLoginService.signAndExecuteFull(telegramId, (tx) => {
+      const tradeCap = tx.add(userDb.balanceManager.mintTradeCap(managerKey));
+      tx.transferObjects([tradeCap], botAddress);
+    });
+
+    // Extract TradeCap ID from objectChanges
+    const tcCreated = result.objectChanges?.find(
+      (c: any) => c.type === "created" && c.objectType?.includes("TradeCap"),
+    );
+
+    if (!tcCreated || !(tcCreated as any).objectId) {
+      throw new Error(
+        "TradeCap not found in transaction result. Tx: " + result.digest,
+      );
+    }
+
+    const tradeCapId = (tcCreated as any).objectId;
+
+    // Save to database
+    await userRepo.setTradeCap(telegramId, tradeCapId);
+
+    // Register user's BalanceManager + TradeCap with the global SDK client
+    // This enables the mirror engine to place orders using generateProofAsTrader
+    const userManagerKey = `USER_${telegramId}`;
+    suiService.reinitialize({
+      [userManagerKey]: {
+        address: user.balance_manager_id,
+        tradeCap: tradeCapId,
+      },
+    });
+
+    await ctx.reply(
+      `✅ Bot Authorized!\n\n` +
+        `🔑 TradeCap: ${truncateAddress(tradeCapId)}\n` +
+        `🤖 Bot: ${truncateAddress(botAddress)}\n` +
+        `🔗 Tx: ${truncateAddress(result.digest)}\n` +
+        `🔗 Explorer: https://suiscan.xyz/mainnet/tx/${result.digest}\n\n` +
+        `The bot can now mirror trades on your behalf.\n` +
+        `Your funds are safe — only YOU can withdraw.\n\n` +
+        `You can revoke access at any time.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("📊 Browse Pools", "menu_pools")],
+        [Markup.button.callback("💵 My Funds", "trading_funds")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("Error granting TradeCap:", error);
+    const errMsg = extractErrorMessage(error);
+
+    let hint = "";
+    if (/insufficient|gas/i.test(errMsg)) {
+      hint = "\n\n💡 Your zkLogin wallet needs SUI for gas.";
+    } else if (/session|expired/i.test(errMsg)) {
+      hint = "\n\n💡 zkLogin session may have expired. Try /connect again.";
+    }
+
+    await ctx.reply(
+      `❌ Failed to authorize bot.\n\n${errMsg}${hint}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Retry", "trading_grant_cap")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+async function handleGrantTradeCapAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleGrantTradeCap(ctx);
+}
+
+// ══════════════════════════════════════════════
+//  WITHDRAW — User withdraws from BalanceManager
+// ══════════════════════════════════════════════
+
+async function handleWithdrawTrading(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (
+    !user?.balance_manager_id ||
+    !user?.balance_manager_key ||
+    !user?.zklogin_address
+  ) {
+    await ctx.reply(
+      `⚠️ No trading account found.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("⚙️ Setup Trading", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  const sessionValid = await zkLoginService.isSessionValid(telegramId);
+  if (!sessionValid) {
+    await ctx.reply(
+      `⚠️ zkLogin session expired. Please /connect again.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔐 Connect Wallet", "wallet_connect")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  // Show withdraw options
+  await ctx.reply(
+    `📤 Withdraw from Trading Account\n\n` +
+      `📦 BalanceManager: ${truncateAddress(user.balance_manager_id)}\n` +
+      `👤 Only you (the owner) can withdraw.\n\n` +
+      `Select what to withdraw:`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback("Withdraw All SUI", "withdraw_all_SUI")],
+      [Markup.button.callback("Withdraw All USDC", "withdraw_all_USDC")],
+      [Markup.button.callback("Withdraw All DEEP", "withdraw_all_DEEP")],
+      [Markup.button.callback("◀️ Back", "trading_funds")],
+    ]),
+  );
+}
+
+async function handleWithdrawTradingAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleWithdrawTrading(ctx);
+}
+
+async function handleWithdrawAllCallback(ctx: BotContext): Promise<void> {
+  const match = (ctx as any).match;
+  if (!match || !match[1]) return;
+
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const coinKey = match[1]; // SUI, USDC, DEEP
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (
+    !user?.balance_manager_id ||
+    !user?.balance_manager_key ||
+    !user?.zklogin_address
+  ) {
+    await ctx.reply("⚠️ Trading account not set up.");
+    return;
+  }
+
+  await ctx.reply(
+    `📤 Withdrawing all ${coinKey} from your BalanceManager...\n\n` +
+      `⏳ Signing with zkLogin...`,
+  );
+
+  try {
+    const managerKey = "MANAGER_1";
+    const userDb = suiService.createUserContext(user.zklogin_address, {
+      [managerKey]: {
+        address: user.balance_manager_id,
+      },
+    });
+
+    const result = await zkLoginService.signAndExecuteFull(telegramId, (tx) => {
+      tx.add(
+        userDb.balanceManager.withdrawAllFromManager(
+          managerKey,
+          coinKey,
+          user.zklogin_address!,
+        ),
+      );
+    });
+
+    await ctx.reply(
+      `✅ Withdrawal Complete!\n\n` +
+        `📤 All ${coinKey} withdrawn to your wallet\n` +
+        `🔗 Tx: ${truncateAddress(result.digest)}\n` +
+        `🔗 Explorer: https://suiscan.xyz/mainnet/tx/${result.digest}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("💵 My Funds", "trading_funds")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("Error withdrawing:", error);
+    const errMsg = extractErrorMessage(error);
+
+    let hint = "";
+    if (/zero|empty|no.*balance/i.test(errMsg)) {
+      hint = `\n\n💡 You may have no ${coinKey} in your BalanceManager.`;
+    }
+
+    await ctx.reply(
+      `❌ Withdrawal failed.\n\n${errMsg}${hint}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("💵 My Funds", "trading_funds")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════
+//  REVOKE TRADE CAP — Remove bot's trading authority
+// ══════════════════════════════════════════════
+
+async function handleRevokeTradeCap(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user?.balance_manager_id || !user?.zklogin_address) {
+    await ctx.reply(
+      `⚠️ No trading account found.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  if (!user.trade_cap_id) {
+    await ctx.reply(
+      `ℹ️ Bot is not currently authorized.\n\nNo TradeCap to revoke.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🤖 Authorize Bot", "trading_grant_cap")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  const sessionValid = await zkLoginService.isSessionValid(telegramId);
+  if (!sessionValid) {
+    await ctx.reply(
+      `⚠️ zkLogin session expired. Please /connect again.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔐 Connect Wallet", "wallet_connect")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  await ctx.reply(
+    `🚫 Revoking Bot Access...\n\n` +
+      `This will revoke the TradeCap.\n` +
+      `The bot will no longer be able to place any orders.\n\n` +
+      `⏳ Signing with zkLogin...`,
+  );
+
+  try {
+    const managerKey = "MANAGER_1";
+    const userDb = suiService.createUserContext(user.zklogin_address, {
+      [managerKey]: {
+        address: user.balance_manager_id,
+      },
+    });
+
+    const result = await zkLoginService.signAndExecuteFull(telegramId, (tx) => {
+      tx.add(
+        userDb.balanceManager.revokeTradeCap(managerKey, user.trade_cap_id!),
+      );
+    });
+
+    // Clear from database
+    await userRepo.clearTradeCap(telegramId);
+
+    // Remove from global SDK manager registry
+    const userManagerKey = `USER_${telegramId}`;
+    const currentManagers = suiService.getRegisteredManagers();
+    delete currentManagers[userManagerKey];
+    if (Object.keys(currentManagers).length > 0) {
+      suiService.reinitialize(currentManagers);
+    }
+
+    await ctx.reply(
+      `✅ Bot Access Revoked!\n\n` +
+        `🚫 TradeCap revoked. Bot can no longer trade.\n` +
+        `🔗 Tx: ${truncateAddress(result.digest)}\n\n` +
+        `Your funds are safe in your BalanceManager.\n` +
+        `You can re-authorize the bot at any time.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🤖 Re-Authorize Bot", "trading_grant_cap")],
+        [Markup.button.callback("💵 My Funds", "trading_funds")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("Error revoking TradeCap:", error);
+    const errMsg = extractErrorMessage(error);
+    await ctx.reply(
+      `❌ Failed to revoke bot access.\n\n${errMsg}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Retry", "trading_revoke_cap")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
+}
+
+async function handleRevokeTradeCapAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleRevokeTradeCap(ctx);
+}
+
+// ══════════════════════════════════════════════
+//  TEST TRADE — Manual order placement for demo
+// ══════════════════════════════════════════════
+
+async function handleTestTrade(ctx: BotContext): Promise<void> {
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user?.balance_manager_id || !user?.trade_cap_id) {
+    await ctx.reply(
+      `⚠️ Test trading requires:\n` +
+        `1. Trading account set up (/setup_trading)\n` +
+        `2. Funds deposited (/fund_trading)\n` +
+        `3. Bot authorized (grant TradeCap)\n\n` +
+        `Complete the setup first.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("⚙️ Setup Trading", "trading_setup")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+    return;
+  }
+
+  await ctx.reply(
+    `🧪 Manual Trade Demo\n\n` +
+      `Place a test order to see how non-custodial trading works.\n` +
+      `The bot will use your TradeCap to place the order.\n\n` +
+      `Select a pool:`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback("SUI/USDC", "test_trade_SUI_USDC")],
+      [Markup.button.callback("SUI/DEEP", "test_trade_SUI_DEEP")],
+      [Markup.button.callback("DEEP/USDC", "test_trade_DEEP_USDC")],
+      [Markup.button.callback("◀️ Back", "trading_funds")],
+    ]),
+  );
+}
+
+async function handleTestTradeAction(ctx: BotContext): Promise<void> {
+  await ctx.answerCbQuery?.().catch(() => {});
+  await handleTestTrade(ctx);
+}
+
+async function handleTestTradePoolCallback(ctx: BotContext): Promise<void> {
+  const match = (ctx as any).match;
+  if (!match || !match[1]) return;
+
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const poolKey = match[1]; // SUI_USDC, SUI_DEEP, DEEP_USDC
+  const [base, quote] = poolKey.split("_");
+
+  await ctx.reply(
+    `🧪 Test Trade on ${poolKey}\n\n` +
+      `Choose order side:\n\n` +
+      `📗 BUY ${base} → Pay with ${quote}\n` +
+      `📕 SELL ${base} → Receive ${quote}`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback(`📗 BUY ${base}`, `test_side_${poolKey}_BUY`)],
+      [Markup.button.callback(`📕 SELL ${base}`, `test_side_${poolKey}_SELL`)],
+      [Markup.button.callback("◀️ Back", "trading_test")],
+    ]),
+  );
+}
+
+async function handleTestTradeSideCallback(ctx: BotContext): Promise<void> {
+  const match = (ctx as any).match;
+  if (!match || !match[1] || !match[2]) return;
+
+  await ctx.answerCbQuery?.().catch(() => {});
+
+  const poolKey = match[1]; // SUI_USDC, SUI_DEEP, etc.
+  const side = match[2]; // BUY or SELL
+  const isBid = side === "BUY";
+
+  const telegramId = ctx.from!.id.toString();
+  const user = await userRepo.getByTelegramId(telegramId);
+
+  if (!user?.balance_manager_id || !user?.trade_cap_id) {
+    await ctx.reply("⚠️ Trading not set up.");
+    return;
+  }
+
+  await ctx.reply(
+    `🧪 Placing test ${side} order on ${poolKey}...\n\n` + `⏳ Please wait...`,
+  );
+
+  try {
+    // Ensure user's BM + TradeCap is registered
+    const userManagerKey = `USER_${telegramId}`;
+    suiService.reinitialize({
+      [userManagerKey]: {
+        address: user.balance_manager_id,
+        tradeCap: user.trade_cap_id,
+      },
+    });
+
+    // Get pool parameters for proper rounding
+    const poolParams = await deepBookService.getPoolBookParams(poolKey);
+    const { tickSize, lotSize, minSize } = poolParams;
+
+    // Determine which asset we need based on order side
+    const [base, quote] = poolKey.split("_");
+    const neededCoin = isBid ? quote : base; // BUY needs quote, SELL needs base
+
+    // Check available balance for the needed asset
+    let availableBalance = 0;
+    try {
+      const balResult = await deepBookService.getManagerBalance(
+        userManagerKey,
+        neededCoin,
+      );
+      availableBalance = balResult.balance;
+    } catch (err) {
+      console.error(`Failed to get balance for ${neededCoin}:`, err);
+    }
+
+    // Get current mid price for reference
+    let rawPrice: number;
+    try {
+      const midPrice = await deepBookService.getMidPrice(poolKey);
+      // Place order slightly off-market to avoid immediate fill (for demo)
+      rawPrice = isBid ? midPrice * 0.95 : midPrice * 1.05;
+    } catch {
+      // Fallback prices if mid price fetch fails
+      rawPrice = isBid ? 1.8 : 2.2; // Example for SUI_USDC
+    }
+
+    // Round price to nearest tick size
+    const price = Math.round(rawPrice / tickSize) * tickSize;
+
+    // Calculate quantity based on minSize and lotSize
+    let quantity = Math.max(minSize, lotSize);
+    // Round up to nearest lot size
+    quantity = Math.ceil(quantity / lotSize) * lotSize;
+
+    // Check if user has enough balance
+    if (availableBalance < quantity) {
+      await ctx.reply(
+        `❌ Insufficient balance.\n\n` +
+          `You need: ${quantity} ${neededCoin}\n` +
+          `You have: ${availableBalance} ${neededCoin}\n\n` +
+          `Pool requires:\n` +
+          `• Min Size: ${minSize}\n` +
+          `• Lot Size: ${lotSize}\n\n` +
+          `💡 To ${side} ${base}, you need at least ${quantity} ${neededCoin}.\n` +
+          `Deposit more via /fund_trading.`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback("💰 Fund Trading", "trading_fund")],
+          [Markup.button.callback("🔄 Retry", "trading_test")],
+          [Markup.button.callback("◀️ Main Menu", "back_main")],
+        ]),
+      );
+      return;
+    }
+
+    const txDigest = await deepBookService.placeLimitOrder({
+      poolKey,
+      managerKey: userManagerKey,
+      price,
+      quantity,
+      isBid,
+      clientOrderId: Date.now(),
+      payWithDeep: false,
+    });
+
+    await ctx.reply(
+      `✅ Test Order Placed!\n\n` +
+        `📊 Pool: ${poolKey}\n` +
+        `${isBid ? "📗" : "📕"} Side: ${side}\n` +
+        `💰 Price: ${price.toFixed(6)}\n` +
+        `📦 Quantity: ${quantity}\n` +
+        `🔗 Tx: ${truncateAddress(txDigest)}\n` +
+        `🔗 Explorer: https://suiscan.xyz/mainnet/tx/${txDigest}\n\n` +
+        `📏 Pool Params:\n` +
+        `  Tick Size: ${tickSize}\n` +
+        `  Lot Size: ${lotSize}\n` +
+        `  Min Size: ${minSize}\n\n` +
+        `This order was placed using your TradeCap.\n` +
+        `The bot placed it on your behalf — you still own the funds.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🧪 Another Test", "trading_test")],
+        [Markup.button.callback("💵 My Funds", "trading_funds")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  } catch (error) {
+    console.error("Error placing test order:", error);
+    const errMsg = extractErrorMessage(error);
+
+    let hint = "";
+    if (/insufficient|balance|withdraw/i.test(errMsg)) {
+      // Parse pool to explain which asset is needed
+      const [base, quote] = poolKey.split("_");
+      const neededAsset = isBid ? quote : base;
+      hint =
+        `\n\n💡 To ${side} ${base}, you need ${neededAsset} in your BalanceManager.\n` +
+        `• BUY ${base} = Pay with ${quote}\n` +
+        `• SELL ${base} = Offer ${base}\n\n` +
+        `Deposit ${neededAsset} via /fund_trading to place this order.`;
+    }
+
+    await ctx.reply(
+      `❌ Test order failed.\n\n${errMsg}${hint}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Retry", "trading_test")],
+        [Markup.button.callback("💰 Fund Trading", "trading_fund")],
+        [Markup.button.callback("◀️ Main Menu", "back_main")],
+      ]),
+    );
+  }
 }
 
 function truncateAddress(addr: string): string {
