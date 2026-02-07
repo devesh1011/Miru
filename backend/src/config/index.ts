@@ -34,15 +34,13 @@ export const config = {
     webhookUrl: process.env.TELEGRAM_WEBHOOK_URL,
   },
 
-  // Database (SQLite for MVP, easy to swap later)
+  // Database (Supabase PostgreSQL)
   database: {
-    sqlitePath: process.env.DB_PATH || "./deepmirror.db",
-    // Legacy PostgreSQL fields (kept for future migration)
-    host: process.env.DB_HOST || "localhost",
-    port: parseInt(process.env.DB_PORT || "5432"),
-    name: process.env.DB_NAME || "deepmirror",
-    user: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD || "",
+    supabaseUrl:
+      process.env.SUPABASE_URL || "https://tycbdxeomrsiyrvdlmgx.supabase.co",
+    supabaseKey:
+      process.env.SUPABASE_KEY ||
+      "sb_publishable_EzSF9AVp6CyEA0Q6VxyhvA_XfyzIDEl",
   },
 
   // App

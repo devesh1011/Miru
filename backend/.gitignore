@@ -10,5 +10,4 @@ deepmirror.db
 deepmirror.db-shm
 deepmirror.db-wal
 package-lock.json
-db
 commands.old.ts
