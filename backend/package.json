@@ -7,7 +7,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest"
+    "test": "vitest",
+    "estimate-gas": "tsx src/scripts/estimate-gas.ts",
+    "deploy:mainnet": "cd ../contracts && sui client publish --gas-budget 100000000"
   },
   "dependencies": {
     "@mysten/deepbook-v3": "^1.0.3",
