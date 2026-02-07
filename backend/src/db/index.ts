@@ -13,3 +13,13 @@ export {
   type DbOrder,
   type DbCapability,
 } from "./repository.js";
+export {
+  analyticsRepo,
+  riskSettingsRepo,
+  notificationPrefsRepo,
+  dailyTradeRepo,
+  type DbPositionAnalytics,
+  type DbRiskSettings,
+  type DbNotificationPreferences,
+  type DbDailyTradeCount,
+} from "./analytics-repository.js";
