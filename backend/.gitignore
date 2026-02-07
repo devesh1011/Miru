@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+coverage/
+.vscode/
+.idea/
+deepmirror.db
+deepmirror.db-shm
+deepmirror.db-wal
+package-lock.json
+db
+commands.old.ts
