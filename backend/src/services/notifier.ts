@@ -37,14 +37,14 @@ export async function notifyOrderMirrored(
   result: MirrorExecutionResult,
 ): Promise<void> {
   // Find the position in DB to get the user
-  const position = positionRepo.getById(result.positionId);
+  const position = await positionRepo.getById(result.positionId);
   if (!position) return;
 
   const side = result.isBid ? "📗 BID" : "📕 ASK";
   const status = result.success ? "✅" : "❌";
 
   // Record in DB
-  orderRepo.create({
+  await orderRepo.create({
     positionId: result.positionId,
     makerOrderId: result.makerOrderId,
     mirroredOrderId: result.mirroredOrderId,
@@ -58,7 +58,7 @@ export async function notifyOrderMirrored(
   });
 
   if (result.success) {
-    positionRepo.incrementOrders(result.positionId);
+    await positionRepo.incrementOrders(result.positionId);
   }
 
   const message = result.success

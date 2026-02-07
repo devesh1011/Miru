@@ -218,7 +218,7 @@ export class ZkLoginService {
     const address = jwtToAddress(jwt, salt, false);
 
     // Retrieve session data from DB
-    const user = userRepo.getByTelegramId(telegramId);
+    const user = await userRepo.getByTelegramId(telegramId);
     if (!user?.ephemeral_keypair || !user?.max_epoch || !user?.jwt_randomness) {
       throw new Error(
         "No active zkLogin session found. Please start with /connect first.",
@@ -376,7 +376,7 @@ export class ZkLoginService {
     telegramId: string,
     buildTx: (tx: Transaction) => void,
   ): Promise<string> {
-    const user = userRepo.getByTelegramId(telegramId);
+    const user = await userRepo.getByTelegramId(telegramId);
     if (
       !user?.zklogin_address ||
       !user?.ephemeral_keypair ||
@@ -453,7 +453,7 @@ export class ZkLoginService {
     objectChanges?: any[];
     effects?: any;
   }> {
-    const user = userRepo.getByTelegramId(telegramId);
+    const user = await userRepo.getByTelegramId(telegramId);
     if (
       !user?.zklogin_address ||
       !user?.ephemeral_keypair ||
@@ -522,7 +522,7 @@ export class ZkLoginService {
    * Check if a user's zkLogin session is still valid (not expired).
    */
   async isSessionValid(telegramId: string): Promise<boolean> {
-    const user = userRepo.getByTelegramId(telegramId);
+    const user = await userRepo.getByTelegramId(telegramId);
     if (!user?.max_epoch || !user?.zklogin_address || !user?.zk_proof) {
       return false;
     }
@@ -541,8 +541,8 @@ export class ZkLoginService {
   /**
    * Get the user's zkLogin address (or null if not authenticated)
    */
-  getUserAddress(telegramId: string): string | null {
-    const user = userRepo.getByTelegramId(telegramId);
+  async getUserAddress(telegramId: string): Promise<string | null> {
+    const user = await userRepo.getByTelegramId(telegramId);
     return user?.zklogin_address || null;
   }
 
