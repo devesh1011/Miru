@@ -9,14 +9,14 @@ Complete guide to all DeepMirror Telegram bot commands and menu interactions.
 
 ## Quick Reference
 
-| Command | Description | Shortcut |
-|---------|-------------|----------|
-| `/start` | Open main menu | - |
-| `/wallet` | View wallet and balances | 🔐 |
-| `/copy` | Manage copy trading | 📊 |
-| `/positions` | View active positions | 📈 |
-| `/help` | Get help and support | ❓ |
-| `/settings` | Bot preferences | ⚙️ |
+| Command      | Description              | Shortcut |
+| ------------ | ------------------------ | -------- |
+| `/start`     | Open main menu           | -        |
+| `/wallet`    | View wallet and balances | 🔐       |
+| `/copy`      | Manage copy trading      | 📊       |
+| `/positions` | View active positions    | 📈       |
+| `/help`      | Get help and support     | ❓       |
+| `/settings`  | Bot preferences          | ⚙️       |
 
 ## Main Menu Commands
 
@@ -25,11 +25,13 @@ Complete guide to all DeepMirror Telegram bot commands and menu interactions.
 Opens the main menu with quick access to all features.
 
 **Usage:**
+
 ```
 /start
 ```
 
 **Response:**
+
 ```
 🤖 DeepMirror Bot
 
@@ -43,9 +45,7 @@ Choose an option:
 ❓ Help - Get support
 ```
 
-<Tip>
-  You can always return to the main menu by typing `/start`.
-</Tip>
+<Tip>You can always return to the main menu by typing `/start`.</Tip>
 
 ---
 
@@ -56,11 +56,13 @@ Choose an option:
 View your wallet address, balances, and zkLogin status.
 
 **Usage:**
+
 ```
 /wallet
 ```
 
 **Response:**
+
 ```
 💼 Your Wallet
 
@@ -89,21 +91,15 @@ Actions:
     - If balance seems outdated
   </Accordion>
 
-  <Accordion title="🔑 Export Wallet">
-    Exports your wallet private key for importing to other Sui wallets.
-    
-    **Security:** Keep private key safe! Anyone with it controls your funds.
-  </Accordion>
+<Accordion title="🔑 Export Wallet">
+  Exports your wallet private key for importing to other Sui wallets.
+  **Security:** Keep private key safe! Anyone with it controls your funds.
+</Accordion>
 
-  <Accordion title="🔐 Sign in with Google">
-    Initiates zkLogin authentication flow.
-    
-    **Steps:**
-    1. Click auth link
-    2. Approve Google OAuth
-    3. Copy redirect URL
-    4. Paste back in bot
-  </Accordion>
+<Accordion title="🔐 Sign in with Google">
+  Initiates zkLogin authentication flow. **Steps:** 1. Click auth link 2.
+  Approve Google OAuth 3. Copy redirect URL 4. Paste back in bot
+</Accordion>
 
   <Accordion title="🔒 Manage Capabilities">
     View and revoke bot trading permissions.
@@ -124,11 +120,13 @@ Actions:
 Manage makers you want to copy trade.
 
 **Usage:**
+
 ```
 /copy
 ```
 
 **Response:**
+
 ```
 📊 Copy Trading
 
@@ -163,56 +161,29 @@ Actions:
   4. Maker added (inactive by default)
   5. Configure and activate
 
-  **Validation:**
-  - Must be valid Sui address (0x + 64 hex chars)
-  - Can't add duplicate
-  - Max 10 makers per user
-</Accordion>
+**Validation:**
+
+- Must be valid Sui address (0x + 64 hex chars)
+- Can't add duplicate
+- Max 10 makers per user
+  </Accordion>
 
 <Accordion title="⚙️ Configure">
-  Set position sizing for a maker.
-  
-  **Options:**
-  
-  1️⃣ **Fixed Ratio**
-  - Copy at percentage of maker's size
-  - Example: 10% ratio = 10 SUI when maker uses 100 SUI
-  - Best for consistent risk management
-  
-  2️⃣ **Fixed Amount**
-  - Always use same SUI amount
-  - Example: 5 SUI per position regardless of maker's size
-  - Best for capital preservation
-  
-  3️⃣ **Match Maker**
-  - Copy exact position size
-  - Example: Maker uses 50 SUI → You use 50 SUI
-  - Best for high conviction
-  
-  After configuring, tap **✅ Activate** to start monitoring.
+  Set position sizing for a maker. **Options:** 1️⃣ **Fixed Ratio** - Copy at
+  percentage of maker's size - Example: 10% ratio = 10 SUI when maker uses 100
+  SUI - Best for consistent risk management 2️⃣ **Fixed Amount** - Always use
+  same SUI amount - Example: 5 SUI per position regardless of maker's size -
+  Best for capital preservation 3️⃣ **Match Maker** - Copy exact position size -
+  Example: Maker uses 50 SUI → You use 50 SUI - Best for high conviction After
+  configuring, tap **✅ Activate** to start monitoring.
 </Accordion>
 
 <Accordion title="🗑️ Remove Maker">
-  Permanently delete a maker from your list.
-  
-  **Effect:**
-  - Stops monitoring immediately
-  - Existing positions remain (close manually)
-  - Configuration deleted
-  - Can re-add later with new config
-  
-  **Confirmation:**
-  ```
-  ⚠️ Remove Maker?
-  
-  Maker: 0x1a2b...
-  Active Positions: 2
-  
-  Note: Existing positions will NOT be closed.
-  Close them manually via /positions.
-  
-  Confirm removal?
-  ```
+  Permanently delete a maker from your list. **Effect:** - Stops monitoring
+  immediately - Existing positions remain (close manually) - Configuration
+  deleted - Can re-add later with new config **Confirmation:** ``` ⚠️ Remove
+  Maker? Maker: 0x1a2b... Active Positions: 2 Note: Existing positions will NOT
+  be closed. Close them manually via /positions. Confirm removal? ```
 </Accordion>
 
 ---
@@ -224,11 +195,13 @@ Actions:
 View and manage all your copy trading positions.
 
 **Usage:**
+
 ```
 /positions
 ```
 
 **Response:**
+
 ```
 📈 Your Active Positions (3)
 
@@ -288,22 +261,13 @@ Actions:
     ```
   </Accordion>
 
-  <Accordion title="🛑 Close Position">
-    Manually close a position and cancel all orders.
-    
-    **Process:**
-    1. Select position to close
-    2. Review details
-    3. Tap **Confirm Close**
-    4. Transaction submitted to DeepBook
-    5. All orders canceled
-    6. Position marked as closed
-    7. Confirmation message sent
-    
-    **Cost:** ~0.02-0.05 SUI in gas fees
-    
-    **Note:** Closing doesn't refund trading fees already paid.
-  </Accordion>
+<Accordion title="🛑 Close Position">
+  Manually close a position and cancel all orders. **Process:** 1. Select
+  position to close 2. Review details 3. Tap **Confirm Close** 4. Transaction
+  submitted to DeepBook 5. All orders canceled 6. Position marked as closed 7.
+  Confirmation message sent **Cost:** ~0.02-0.05 SUI in gas fees **Note:**
+  Closing doesn't refund trading fees already paid.
+</Accordion>
 
   <Accordion title="↻ Refresh All">
     Updates order counts and statuses for all positions.
@@ -326,11 +290,13 @@ Actions:
 Access help documentation and support.
 
 **Usage:**
+
 ```
 /help
 ```
 
 **Response:**
+
 ```
 ❓ Help & Support
 
@@ -361,11 +327,13 @@ Access help documentation and support.
 Configure bot preferences and notifications.
 
 **Usage:**
+
 ```
 /settings
 ```
 
 **Response:**
+
 ```
 ⚙️ Bot Settings
 
@@ -398,11 +366,10 @@ Actions:
     **Recommended:** ✅ Enabled
   </Card>
 
-  <Card title="Order Placed">
-    Alert for each order execution.
-    
-    **Recommended:** ✅ Enabled (can be noisy for active makers)
-  </Card>
+<Card title="Order Placed">
+  Alert for each order execution. **Recommended:** ✅ Enabled (can be noisy for
+  active makers)
+</Card>
 
   <Card title="Low Balance">
     Warning when SUI < 0.1 or DEEP < 5.
@@ -435,16 +402,14 @@ Filter positions by status:
 
 Some actions have keyboard shortcuts:
 
-| Shortcut | Action |
-|----------|--------|
-| `W` | Open wallet |
-| `C` | Open copy trading |
-| `P` | Open positions |
-| `H` | Open help |
+| Shortcut | Action            |
+| -------- | ----------------- |
+| `W`      | Open wallet       |
+| `C`      | Open copy trading |
+| `P`      | Open positions    |
+| `H`      | Open help         |
 
-<Note>
-  Shortcuts work in the main menu only.
-</Note>
+<Note>Shortcuts work in the main menu only.</Note>
 
 ---
 
@@ -487,13 +452,10 @@ Results appear inline, tap to open full menu.
     4. Contact support if persists
   </Accordion>
 
-  <Accordion title="Buttons not responding">
-    **Causes:**
-    - Old message (buttons expire after 48h)
-    - Bot restarted (sessions cleared)
-    
-    **Solution:** Type `/start` to get fresh menu.
-  </Accordion>
+<Accordion title="Buttons not responding">
+  **Causes:** - Old message (buttons expire after 48h) - Bot restarted (sessions
+  cleared) **Solution:** Type `/start` to get fresh menu.
+</Accordion>
 
   <Accordion title="Missing commands">
     **Possible reasons:**
@@ -513,13 +475,13 @@ Results appear inline, tap to open full menu.
 
 In-chat shortcuts for power users:
 
-| Input | Result |
-|-------|--------|
-| `w` or `wallet` | `/wallet` |
-| `c` or `copy` | `/copy` |
-| `p` or `pos` | `/positions` |
-| `h` or `help` | `/help` |
-| `?` | `/help` |
+| Input           | Result       |
+| --------------- | ------------ |
+| `w` or `wallet` | `/wallet`    |
+| `c` or `copy`   | `/copy`      |
+| `p` or `pos`    | `/positions` |
+| `h` or `help`   | `/help`      |
+| `?`             | `/help`      |
 
 <Tip>
   Shortcuts are **not** case-sensitive. `W`, `w`, and `wallet` all work.
@@ -534,13 +496,13 @@ In-chat shortcuts for power users:
     Complete wallet management
   </Card>
 
-  <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
-    Setup and strategies
-  </Card>
+<Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
+  Setup and strategies
+</Card>
 
-  <Card title="Position Management" icon="chart-line" href="/bot/positions">
-    Track your trades
-  </Card>
+<Card title="Position Management" icon="chart-line" href="/bot/positions">
+  Track your trades
+</Card>
 
   <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
     Fix common issues

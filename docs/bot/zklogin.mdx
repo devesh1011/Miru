@@ -16,7 +16,8 @@ zkLogin combines three technologies:
 3. **Deterministic Wallets** - Your Google account ID maps to a unique Sui address
 
 <Info>
-  zkLogin is **native to Sui blockchain**. DeepMirror leverages this protocol for seamless authentication.
+  zkLogin is **native to Sui blockchain**. DeepMirror leverages this protocol
+  for seamless authentication.
 </Info>
 
 ## How zkLogin Works
@@ -30,6 +31,7 @@ User → Generate Random Private Key → Derive Address
 ```
 
 **Problems:**
+
 - Seed phrases are hard to remember
 - Easy to lose or compromise
 - Poor user experience
@@ -46,6 +48,7 @@ User → Sign in with Google
 ```
 
 **Benefits:**
+
 - ✅ Familiar OAuth flow
 - ✅ Nothing to backup or remember
 - ✅ Same wallet every time you sign in
@@ -114,7 +117,8 @@ In the database:
 ```
 
 <Warning>
-  This data is **encrypted at rest** in Supabase. Still, never share your zkLogin session with anyone!
+  This data is **encrypted at rest** in Supabase. Still, never share your
+  zkLogin session with anyone!
 </Warning>
 
 ## Sign In with Google
@@ -122,11 +126,13 @@ In the database:
 ### Step-by-Step
 
 1. **Open Wallet Menu**
+
    ```
    /wallet
    ```
 
 2. **Tap Sign In**
+
    ```
    🔐 Wallet
    > Sign in with Google
@@ -159,7 +165,8 @@ In the database:
    - Wallet created!
 
 <Tip>
-  The URL contains sensitive data. Only paste it in the DeepMirror bot, never share publicly!
+  The URL contains sensitive data. Only paste it in the DeepMirror bot, never
+  share publicly!
 </Tip>
 
 ### Success Confirmation
@@ -183,6 +190,7 @@ You can now copy trade!
 zkLogin sessions last **7 days** (max epoch on Sui).
 
 After 7 days:
+
 - Session expires automatically
 - Bot can no longer sign transactions
 - Your wallet still exists (it's on-chain)
@@ -210,7 +218,8 @@ When session expires (or any time before):
 4. Session renewed for another 7 days
 
 <Note>
-  Renewing your session **does NOT change your wallet address**. Same Google account = same address forever.
+  Renewing your session **does NOT change your wallet address**. Same Google
+  account = same address forever.
 </Note>
 
 ## Security Considerations
@@ -218,45 +227,51 @@ When session expires (or any time before):
 ### What zkLogin Protects
 
 ✅ **Your private key never leaves Sui**
+
 - zkLogin doesn't generate traditional private keys
 - Signing happens via ZK proof + ephemeral key
 - No single point of compromise
 
 ✅ **OAuth token stays private**
+
 - Zero-knowledge proof hides the JWT
 - Even if someone intercepts communication, they can't reconstruct your key
 
 ✅ **Deterministic recovery**
+
 - Lose your phone? Just sign in again with Google
 - Same wallet address restored
 
 ### What You Must Protect
 
 🔒 **Your Google account**
+
 - If compromised, attacker can authenticate zkLogin
 - Use 2FA on your Google account
 - Strong password
 
 🔒 **Your redirect URL**
+
 - Contains your JWT token
 - Anyone with this can create ZK proof
 - Only valid for a few minutes, but still sensitive
 
 🔒 **Bot's database**
+
 - Ephemeral keys stored here
 - If leaked, attacker can sign for remaining session duration
 - DeepMirror encrypts this data
 
 ### zkLogin vs. Traditional Wallets
 
-| Feature | zkLogin | Traditional Wallet |
-|---------|---------|-------------------|
-| Setup | OAuth flow (30 seconds) | Generate + Backup seed phrase (5+ mins) |
-| Recovery | Sign in with Google | Must have seed phrase backup |
-| Loss Risk | Low (Google account) | High (lose seed = lose funds) |
-| Privacy | Provider knows you use blockchain | Fully anonymous |
-| Custody | Self-custodial | Self-custodial |
-| Export | Can export private key | Already have private key |
+| Feature   | zkLogin                           | Traditional Wallet                      |
+| --------- | --------------------------------- | --------------------------------------- |
+| Setup     | OAuth flow (30 seconds)           | Generate + Backup seed phrase (5+ mins) |
+| Recovery  | Sign in with Google               | Must have seed phrase backup            |
+| Loss Risk | Low (Google account)              | High (lose seed = lose funds)           |
+| Privacy   | Provider knows you use blockchain | Fully anonymous                         |
+| Custody   | Self-custodial                    | Self-custodial                          |
+| Export    | Can export private key            | Already have private key                |
 
 ## Advanced: Technical Details
 
@@ -307,6 +322,7 @@ signature = sign(
 ```
 
 Validators verify:
+
 1. Ephemeral signature is valid
 2. ZK proof is valid
 3. Max epoch not exceeded
@@ -317,6 +333,7 @@ Validators verify:
 Sui works in "epochs" (~24 hours each).
 
 zkLogin sessions can span max **10 epochs** (~10 days), but:
+
 - Most implementations use 7 days for safety
 - After expiration, proof is invalid
 - Must re-authenticate with OAuth
@@ -333,34 +350,23 @@ zkLogin sessions can span max **10 epochs** (~10 days), but:
     **Solution:** Start fresh, use external browser, copy full URL quickly.
   </Accordion>
 
-  <Accordion title="Session expired">
-    **Normal behavior** after 7 days.
-    
-    **Solution:**
-    1. Go to `/wallet`
-    2. Tap **Sign in with Google**
-    3. Complete OAuth (same account)
-    4. Wallet address unchanged, session renewed
-  </Accordion>
+<Accordion title="Session expired">
+  **Normal behavior** after 7 days. **Solution:** 1. Go to `/wallet` 2. Tap
+  **Sign in with Google** 3. Complete OAuth (same account) 4. Wallet address
+  unchanged, session renewed
+</Accordion>
 
-  <Accordion title="Different wallet address appeared">
-    **Likely causes:**
-    1. Different Google account used
-    2. Different address_seed (shouldn't happen in DeepMirror)
-    
-    **Solution:**
-    - Use the **exact same Google account** every time
-    - Contact support if persists
-  </Accordion>
+<Accordion title="Different wallet address appeared">
+  **Likely causes:** 1. Different Google account used 2. Different address_seed
+  (shouldn't happen in DeepMirror) **Solution:** - Use the **exact same Google
+  account** every time - Contact support if persists
+</Accordion>
 
-  <Accordion title="Can't sign transactions">
-    **Check:**
-    1. zkLogin session active? (see `/wallet`)
-    2. Session expired? Re-authenticate
-    3. Capability granted? Check wallet settings
-    
-    **Solution:** Verify session, re-auth if needed, ensure capability exists.
-  </Accordion>
+<Accordion title="Can't sign transactions">
+  **Check:** 1. zkLogin session active? (see `/wallet`) 2. Session expired?
+  Re-authenticate 3. Capability granted? Check wallet settings **Solution:**
+  Verify session, re-auth if needed, ensure capability exists.
+</Accordion>
 
   <Accordion title="Want to export private key">
     **zkLogin doesn't use traditional private keys**, but you can:
@@ -393,7 +399,8 @@ zkLogin sessions can span max **10 epochs** (~10 days), but:
 ✅ Critical production funds
 
 <Tip>
-  For DeepMirror, zkLogin is ideal: easy access, frequent re-authentication is fine, and you can always export keys later!
+  For DeepMirror, zkLogin is ideal: easy access, frequent re-authentication is
+  fine, and you can always export keys later!
 </Tip>
 
 ## Privacy Considerations
@@ -401,6 +408,7 @@ zkLogin sessions can span max **10 epochs** (~10 days), but:
 ### What Google Knows
 
 When you use zkLogin with Google:
+
 - Google knows you authenticated with a Sui app
 - Google sees your email accessed "DeepMirror"
 - Google **doesn't** know:
@@ -411,6 +419,7 @@ When you use zkLogin with Google:
 ### What Sui Validators Know
 
 Sui blockchain validators see:
+
 - Your wallet address
 - Your transactions
 - zkLogin proof (but not your JWT)
@@ -439,13 +448,13 @@ Sui blockchain validators see:
     Manage balances and exports
   </Card>
 
-  <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
-    Start copying traders
-  </Card>
+<Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
+  Start copying traders
+</Card>
 
-  <Card title="Security Guide" icon="shield" href="/advanced/security">
-    Protect your wallet
-  </Card>
+<Card title="Security Guide" icon="shield" href="/advanced/security">
+  Protect your wallet
+</Card>
 
   <Card title="Sui zkLogin Docs" icon="book" href="https://docs.sui.io/concepts/cryptography/zklogin">
     Official zkLogin documentation

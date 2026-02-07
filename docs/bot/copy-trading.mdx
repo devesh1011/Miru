@@ -19,7 +19,8 @@ When you add a maker wallet, DeepMirror:
 6. **Tracks** the position lifecycle and order status
 
 <Info>
-  All copy trades execute **on-chain** through DeepBook V3. No centralized intermediaries, full transparency.
+  All copy trades execute **on-chain** through DeepBook V3. No centralized
+  intermediaries, full transparency.
 </Info>
 
 ## Access Copy Trading
@@ -31,12 +32,14 @@ From the main menu, tap **📊 Copy Trading** or use `/copy` command.
 ### Step 1: Find a Maker
 
 You need the Sui address of the trader you want to copy. You can:
+
 - Track profitable wallets from DeepBook analytics
 - Follow community-recommended traders
 - Use your own test wallet for learning
 
 <Warning>
-  Only copy traders you trust! DeepMirror executes trades automatically. Do your own research.
+  Only copy traders you trust! DeepMirror executes trades automatically. Do your
+  own research.
 </Warning>
 
 ### Step 2: Add the Maker
@@ -64,6 +67,7 @@ Before activating, configure how you'll size your positions:
 Copy at a fixed percentage of the maker's position size.
 
 **Example:**
+
 - Maker opens: 100 SUI position
 - Your ratio: 10%
 - Your position: 10 SUI
@@ -80,6 +84,7 @@ Custom: Enter any percentage (1-100%)
 Use the same SUI amount regardless of maker's position size.
 
 **Example:**
+
 - Maker opens: 50 SUI position → You open: 5 SUI
 - Maker opens: 200 SUI position → You open: 5 SUI (same)
 
@@ -94,12 +99,14 @@ Amount range: 0.1 - 1000 SUI
 Copy the maker's exact position size.
 
 **Example:**
+
 - Maker opens: 75 SUI → You open: 75 SUI
 
 Best for: High-conviction copying, when you have similar capital.
 
 <Warning>
-  **Match Maker** can use significant capital if the maker opens large positions. Use with caution!
+  **Match Maker** can use significant capital if the maker opens large
+  positions. Use with caution!
 </Warning>
 
 ### Step 4: Activate Copying
@@ -156,6 +163,7 @@ You can copy up to **10 makers simultaneously**. Each maker has independent sett
 ### View All Makers
 
 The **Copy Trading** menu shows:
+
 - Maker address (truncated)
 - Status (Active ✅ / Inactive ❌)
 - Current configuration
@@ -169,7 +177,8 @@ The **Copy Trading** menu shows:
 4. Save changes
 
 <Note>
-  Configuration changes only affect **new positions**. Existing positions remain unchanged.
+  Configuration changes only affect **new positions**. Existing positions remain
+  unchanged.
 </Note>
 
 ### Pause Copying
@@ -181,6 +190,7 @@ To temporarily stop copying a maker:
 3. Confirm
 
 Paused makers:
+
 - Stop creating new positions
 - Keep existing positions active
 - Can be resumed anytime
@@ -194,7 +204,8 @@ To permanently delete a maker:
 3. Confirm deletion
 
 <Warning>
-  Removing a maker does **not** close existing positions. Manage those separately via `/positions`.
+  Removing a maker does **not** close existing positions. Manage those
+  separately via `/positions`.
 </Warning>
 
 ## Capabilities and Permissions
@@ -204,11 +215,13 @@ For the bot to execute copy trades, you need to grant it a **Capability object**
 ### What is a Capability?
 
 Capabilities are on-chain permission objects that allow the bot to:
+
 - Access your balance manager
 - Place orders on your behalf
 - Interact with DeepBook V3
 
 **You retain full control:**
+
 - Capabilities are revocable
 - Limited to specific actions
 - Don't give access to withdraw funds
@@ -218,12 +231,13 @@ Capabilities are on-chain permission objects that allow the bot to:
 The first time you activate a maker, you'll be prompted:
 
 1. Review the capability details:
+
    ```
    Granting access to:
    - Place orders on DeepBook V3
    - Use your balance manager
    - Execute copy trades
-   
+
    NOT granted:
    - Withdraw tokens
    - Transfer assets
@@ -310,6 +324,7 @@ Here's what happens from start to finish:
 ### 1. Maker Places Order
 
 Maker wallet submits a transaction to DeepBook V3:
+
 - Creates a new position
 - Places limit orders
 - Sets price and quantity
@@ -317,6 +332,7 @@ Maker wallet submits a transaction to DeepBook V3:
 ### 2. Bot Detects Transaction
 
 DeepMirror monitors blockchain events:
+
 - Detects maker's transaction within 500ms
 - Extracts position details (pool, side, price)
 - Validates it's a DeepBook V3 trade
@@ -324,6 +340,7 @@ DeepMirror monitors blockchain events:
 ### 3. Position Creation
 
 Bot creates your copy position:
+
 - Calculates size based on your ratio
 - Checks your balances (SUI + DEEP)
 - Creates position record in database
@@ -332,6 +349,7 @@ Bot creates your copy position:
 ### 4. Order Execution
 
 Your order is placed on DeepBook V3:
+
 - Uses your capability object
 - Matches maker's pool and side
 - Adjusts quantity per your ratio
@@ -340,6 +358,7 @@ Your order is placed on DeepBook V3:
 ### 5. Position Monitoring
 
 DeepMirror tracks both positions:
+
 - Syncs order counts
 - Monitors maker's updates
 - Alerts you of changes
@@ -348,6 +367,7 @@ DeepMirror tracks both positions:
 ### 6. Position Lifecycle
 
 Positions remain active until:
+
 - You manually close via `/positions`
 - Maker closes their position
 - You deactivate the maker
@@ -358,6 +378,7 @@ Positions remain active until:
 ### Smart Filters (Coming Soon)
 
 Filter which positions to copy based on:
+
 - Minimum/maximum position size
 - Specific trading pairs only
 - Time-based rules (e.g., only during Asian hours)
@@ -366,6 +387,7 @@ Filter which positions to copy based on:
 ### Auto-Close Settings (Coming Soon)
 
 Automatically close positions when:
+
 - Maker closes their position
 - Target profit/loss reached
 - Time limit exceeded
@@ -374,6 +396,7 @@ Automatically close positions when:
 ### Position Limits (Coming Soon)
 
 Set boundaries to protect capital:
+
 - Max positions per maker
 - Max total exposure across all makers
 - Daily loss limits
@@ -410,21 +433,17 @@ Set boundaries to protect capital:
     Never allocate more than you can afford to lose. Start conservative.
   </Accordion>
 
-  <Accordion title="How many makers should I copy?">
-    **Beginners:** 1-2 makers to learn mechanics
-    **Intermediate:** 3-5 makers to diversify
-    **Advanced:** 5-10 makers with different strategies
-    
-    More isn't always better. Focus on quality.
-  </Accordion>
+<Accordion title="How many makers should I copy?">
+  **Beginners:** 1-2 makers to learn mechanics **Intermediate:** 3-5 makers to
+  diversify **Advanced:** 5-10 makers with different strategies More isn't
+  always better. Focus on quality.
+</Accordion>
 
-  <Accordion title="What if maker makes bad trades?">
-    Your positions are **independent**. If maker's strategy fails:
-    1. Pause the maker immediately
-    2. Close your positions via `/positions`
-    3. Remove the maker
-    4. Capital loss is limited to positions already opened
-  </Accordion>
+<Accordion title="What if maker makes bad trades?">
+  Your positions are **independent**. If maker's strategy fails: 1. Pause the
+  maker immediately 2. Close your positions via `/positions` 3. Remove the maker
+  4. Capital loss is limited to positions already opened
+</Accordion>
 
   <Accordion title="Can I lose more than my position size?">
     **No.** On DeepBook:
@@ -449,23 +468,18 @@ Set boundaries to protect capital:
     **Solution:** Check balances, verify maker is active, review notifications for error message.
   </Accordion>
 
-  <Accordion title="Position size incorrect">
-    **Causes:**
-    - Configuration updated after position created
-    - Rounding errors on small amounts
-    - Balance too low to match exact ratio
-    
-    **Solution:** Verify configuration in maker settings. Newest config applies to future positions only.
-  </Accordion>
+<Accordion title="Position size incorrect">
+  **Causes:** - Configuration updated after position created - Rounding errors
+  on small amounts - Balance too low to match exact ratio **Solution:** Verify
+  configuration in maker settings. Newest config applies to future positions
+  only.
+</Accordion>
 
-  <Accordion title="Can't activate maker">
-    **Requirements:**
-    - zkLogin active (not expired)
-    - Capability granted
-    - Minimum balance (0.5 SUI + 10 DEEP)
-    
-    **Solution:** Check wallet screen, refresh zkLogin, grant capability.
-  </Accordion>
+<Accordion title="Can't activate maker">
+  **Requirements:** - zkLogin active (not expired) - Capability granted -
+  Minimum balance (0.5 SUI + 10 DEEP) **Solution:** Check wallet screen, refresh
+  zkLogin, grant capability.
+</Accordion>
 
   <Accordion title="Too many positions created">
     **Cause:** Maker is very active trader
@@ -485,13 +499,13 @@ Set boundaries to protect capital:
     Track and manage your copy trades
   </Card>
 
-  <Card title="Bot Commands" icon="terminal" href="/bot/commands">
-    Complete command reference
-  </Card>
+<Card title="Bot Commands" icon="terminal" href="/bot/commands">
+  Complete command reference
+</Card>
 
-  <Card title="DeepBook V3" icon="book" href="/advanced/deepbook-v3">
-    Understand the trading protocol
-  </Card>
+<Card title="DeepBook V3" icon="book" href="/advanced/deepbook-v3">
+  Understand the trading protocol
+</Card>
 
   <Card title="Fee Structure" icon="coins" href="/advanced/fees">
     Gas and trading fee breakdown

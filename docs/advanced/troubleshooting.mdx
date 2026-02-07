@@ -21,22 +21,15 @@ Run through these checks first:
     - ✅ DEEP balance > 5?
   </Step>
 
-  <Step title="Verify copy trading config">
-    ```
-    /copy
-    ```
-    - ✅ Maker address correct?
-    - ✅ Maker activated (not paused)?
-    - ✅ Position ratio configured?
-  </Step>
+<Step title="Verify copy trading config">
+  ``` /copy ``` - ✅ Maker address correct? - ✅ Maker activated (not paused)? -
+  ✅ Position ratio configured?
+</Step>
 
-  <Step title="Check positions">
-    ```
-    /positions
-    ```
-    - ✅ Positions showing expected status?
-    - ✅ Order counts updating?
-  </Step>
+<Step title="Check positions">
+  ``` /positions ``` - ✅ Positions showing expected status? - ✅ Order counts
+  updating?
+</Step>
 
   <Step title="Review notifications">
     - ✅ Any error messages?
@@ -54,6 +47,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "zkLogin session expired"
 
 **Symptoms:**
+
 - Can't place orders
 - Wallet shows "❌ zkLogin not active"
 - Transaction failures
@@ -87,6 +81,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "OAuth redirect not working"
 
 **Symptoms:**
+
 - Paste redirect URL but bot says invalid
 - "JWT parsing failed" error
 - Authentication stuck
@@ -105,30 +100,18 @@ If diagnostics pass but issue persists, see specific problems below.
     5. Paste in Telegram
   </Accordion>
 
-  <Accordion title="Incomplete URL copied">
-    **Problem:** URL is truncated, missing JWT after `#`.
-    
-    **Solution:**
-    Full URL looks like:
-    ```
-    https://authflow.sui.io/#id_token=eyJhbGc...&state=...
-    ```
-    
-    Must include **everything** after `#`. If browser hides it:
-    1. Click address bar
-    2. Select all (Ctrl+A / Cmd+A)
-    3. Copy (Ctrl+C / Cmd+C)
-    4. Paste in Telegram
-  </Accordion>
+<Accordion title="Incomplete URL copied">
+  **Problem:** URL is truncated, missing JWT after `#`. **Solution:** Full URL
+  looks like: ``` https://authflow.sui.io/#id_token=eyJhbGc...&state=... ```
+  Must include **everything** after `#`. If browser hides it: 1. Click address
+  bar 2. Select all (Ctrl+A / Cmd+A) 3. Copy (Ctrl+C / Cmd+C) 4. Paste in
+  Telegram
+</Accordion>
 
-  <Accordion title="Waited too long">
-    **Problem:** Redirect URLs expire in 5 minutes.
-    
-    **Solution:**
-    1. Start zkLogin process again
-    2. Complete OAuth quickly
-    3. Copy/paste within 5 minutes
-  </Accordion>
+<Accordion title="Waited too long">
+  **Problem:** Redirect URLs expire in 5 minutes. **Solution:** 1. Start zkLogin
+  process again 2. Complete OAuth quickly 3. Copy/paste within 5 minutes
+</Accordion>
 
   <Accordion title="Wrong Google account">
     **Problem:** Multiple Google accounts, selected different one.
@@ -145,6 +128,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Wallet address changed"
 
 **Symptoms:**
+
 - Different address than before
 - Positions missing
 - Balance shows zero
@@ -158,9 +142,11 @@ If diagnostics pass but issue persists, see specific problems below.
    - Sign in with the **original account**
 
 2. **Check on Explorer:**
+
    ```
    https://testnet.suivision.xyz/account/YOUR_OLD_ADDRESS
    ```
+
    - Funds still there?
    - Positions still on-chain?
 
@@ -170,7 +156,8 @@ If diagnostics pass but issue persists, see specific problems below.
    - If not, contact support with both addresses
 
 <Warning>
-  zkLogin addresses are **deterministic**. Same Google account always gives same address. If it changed, you used a different account.
+  zkLogin addresses are **deterministic**. Same Google account always gives same
+  address. If it changed, you used a different account.
 </Warning>
 
 ---
@@ -180,6 +167,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Maker traded but I didn't copy"
 
 **Symptoms:**
+
 - Maker has new position on DeepBook
 - Your bot didn't create copy position
 - No notification received
@@ -252,15 +240,10 @@ If diagnostics pass but issue persists, see specific problems below.
     3. Session renewed
   </Accordion>
 
-  <Accordion title="Maker not activated">
-    **Error:** Maker shows "⏸️ Paused" or "❌ Inactive"
-    
-    **Fix:**
-    1. `/copy`
-    2. Select maker
-    3. Tap **✅ Activate**
-    4. Confirm activation
-  </Accordion>
+<Accordion title="Maker not activated">
+  **Error:** Maker shows "⏸️ Paused" or "❌ Inactive" **Fix:** 1. `/copy` 2.
+  Select maker 3. Tap **✅ Activate** 4. Confirm activation
+</Accordion>
 
   <Accordion title="Wrong pool">
     **Cause:** Maker traded on unsupported pool or different DEX
@@ -277,6 +260,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Position stuck in Monitoring"
 
 **Symptoms:**
+
 - Position created
 - Order count stays at 0
 - Status: "Monitoring 🔍"
@@ -297,15 +281,11 @@ If diagnostics pass but issue persists, see specific problems below.
     **Action:** Wait or close position if tired of waiting.
   </Accordion>
 
-  <Accordion title="Maker already has orders (detection failed)">
-    **Cause:** Bot missed maker's initial order (rare).
-    
-    **Fix:**
-    1. `/positions`
-    2. Select stuck position
-    3. Tap **↻ Refresh**
-    4. If still 0, close and let bot create new position on next maker order
-  </Accordion>
+<Accordion title="Maker already has orders (detection failed)">
+  **Cause:** Bot missed maker's initial order (rare). **Fix:** 1. `/positions`
+  2. Select stuck position 3. Tap **↻ Refresh** 4. If still 0, close and let bot
+  create new position on next maker order
+</Accordion>
 
   <Accordion title="Pool doesn't exist">
     **Cause:** Maker's pool address invalid.
@@ -322,6 +302,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Order count not updating"
 
 **Symptoms:**
+
 - Position shows 3 orders
 - Maker placed 2 more orders
 - Your order count still shows 3
@@ -331,6 +312,7 @@ If diagnostics pass but issue persists, see specific problems below.
 **Solutions:**
 
 1. **Manual refresh:**
+
    ```
    /positions > Select position > ↻ Refresh
    ```
@@ -355,6 +337,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Can't close position"
 
 **Symptoms:**
+
 - Tap "Close Position"
 - Transaction fails
 - Error message appears
@@ -409,6 +392,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Position shows wrong order count"
 
 **Symptoms:**
+
 - Your position: 5 orders
 - But checking DeepBook Explorer: only 3 orders
 
@@ -417,11 +401,13 @@ If diagnostics pass but issue persists, see specific problems below.
 **Solution:**
 
 1. **Force refresh:**
+
    ```
    /positions > Select position > ↻ Refresh
    ```
 
 2. **Manually verify on Explorer:**
+
    ```
    https://testnet.deepbook.tech
    Connect wallet > View positions
@@ -443,6 +429,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Balance shows 0 but I sent tokens"
 
 **Symptoms:**
+
 - Sent SUI/DEEP to wallet address
 - `/wallet` still shows 0 balance
 
@@ -456,17 +443,15 @@ If diagnostics pass but issue persists, see specific problems below.
     4. Confirm tokens arrived
   </Step>
 
-  <Step title="Check correct network">
-    - DeepMirror uses **Testnet**
-    - Did you send on Mainnet by mistake?
-    - Testnet and Mainnet are separate!
-  </Step>
+<Step title="Check correct network">
+  - DeepMirror uses **Testnet** - Did you send on Mainnet by mistake? - Testnet
+  and Mainnet are separate!
+</Step>
 
-  <Step title="Verify address">
-    - Did you copy **entire address**?
-    - Addresses start with `0x` (66 chars total)
-    - Check for typos
-  </Step>
+<Step title="Verify address">
+  - Did you copy **entire address**? - Addresses start with `0x` (66 chars
+  total) - Check for typos
+</Step>
 
   <Step title="Refresh balance">
     ```
@@ -489,14 +474,11 @@ If diagnostics pass but issue persists, see specific problems below.
     - Double-check address next time
   </Accordion>
 
-  <Accordion title="Sent on wrong network">
-    **Problem:** Sent on Mainnet, bot uses Testnet.
-    
-    **Fix:**
-    - Testnet and Mainnet addresses are the same format but separate networks
-    - Tokens sent on Mainnet won't appear on Testnet
-    - Use correct faucet for testnet tokens
-  </Accordion>
+<Accordion title="Sent on wrong network">
+  **Problem:** Sent on Mainnet, bot uses Testnet. **Fix:** - Testnet and Mainnet
+  addresses are the same format but separate networks - Tokens sent on Mainnet
+  won't appear on Testnet - Use correct faucet for testnet tokens
+</Accordion>
 
   <Accordion title="Transaction pending">
     **Problem:** Transaction not yet confirmed.
@@ -523,6 +505,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Capability not working"
 
 **Symptoms:**
+
 - Granted capability
 - Bot still says "No capability"
 - Can't activate copy trading
@@ -530,15 +513,19 @@ If diagnostics pass but issue persists, see specific problems below.
 **Solution:**
 
 1. **Verify on-chain:**
+
    ```
    https://testnet.suivision.xyz/account/YOUR_ADDRESS/objects
    ```
+
    Look for capability object (type: `Capability`)
 
 2. **Check in bot:**
+
    ```
    /wallet > Manage Capabilities
    ```
+
    Should show active capability
 
 3. **If missing:**
@@ -558,6 +545,7 @@ If diagnostics pass but issue persists, see specific problems below.
 ### "Bot not responding"
 
 **Symptoms:**
+
 - Commands don't work
 - No replies from bot
 - Buttons don't respond
@@ -571,19 +559,12 @@ If diagnostics pass but issue persists, see specific problems below.
     - Wait 2-3 minutes
   </Step>
 
-  <Step title="Restart Telegram">
-    1. Close Telegram app completely
-    2. Clear from recent apps
-    3. Reopen Telegram
-    4. Try command again
-  </Step>
+<Step title="Restart Telegram">
+  1. Close Telegram app completely 2. Clear from recent apps 3. Reopen Telegram
+  4. Try command again
+</Step>
 
-  <Step title="Reset conversation">
-    ```
-    /start
-    ```
-    Fresh menu should appear.
-  </Step>
+<Step title="Reset conversation">``` /start ``` Fresh menu should appear.</Step>
 
   <Step title="Check announcements">
     - Visit [community channel](https://t.me/deepmirror_community)
@@ -599,6 +580,7 @@ If bot remains unresponsive for > 30 minutes, check status page or contact suppo
 ### "Buttons expired / not working"
 
 **Symptoms:**
+
 - Tap button, nothing happens
 - "Message is too old" error
 
@@ -612,24 +594,25 @@ If bot remains unresponsive for > 30 minutes, check status page or contact suppo
 
 Get fresh menu with working buttons.
 
-<Tip>
-  Always use latest menu. Old messages won't work.
-</Tip>
+<Tip>Always use latest menu. Old messages won't work.</Tip>
 
 ---
 
 ### "Notifications not arriving"
 
 **Symptoms:**
+
 - Copy trades happening but no Telegram messages
 - Missing low balance warnings
 
 **Solution:**
 
 1. **Check notification settings:**
+
    ```
    /settings > Notifications
    ```
+
    Ensure all desired alerts are **enabled** (✅)
 
 2. **Verify Telegram notifications:**
@@ -655,15 +638,18 @@ Get fresh menu with working buttons.
 ### "Transaction failed: Insufficient funds"
 
 **Symptoms:**
+
 - Transaction submitted
 - Error: "Insufficient balance for gas"
 
 **Solution:**
 
 1. **Check SUI balance:**
+
    ```
    /wallet
    ```
+
    Need at least 0.1 SUI
 
 2. **Get more SUI:**
@@ -677,6 +663,7 @@ Get fresh menu with working buttons.
 ### "Transaction failed: Gas budget exceeded"
 
 **Symptoms:**
+
 - Complex transaction
 - "Gas budget exceeded" error
 - Some gas still deducted
@@ -694,6 +681,7 @@ Get fresh menu with working buttons.
 ### "Transaction failed: Nonce invalid"
 
 **Symptoms:**
+
 - "Invalid nonce" or "Nonce mismatch"
 - Transaction rejected
 
@@ -714,6 +702,7 @@ Get fresh menu with working buttons.
 ### "Slow order execution"
 
 **Symptoms:**
+
 - Maker places order
 - Your copy delay > 5 seconds
 
@@ -731,14 +720,10 @@ Get fresh menu with working buttons.
     **This is expected.**
   </Accordion>
 
-  <Accordion title="Network congestion">
-    **Delay:** 3-10 seconds
-    
-    - Sui testnet occasionally slow
-    - High transaction volume period
-    - Nothing you can do
-    - Usually resolves quickly
-  </Accordion>
+<Accordion title="Network congestion">
+  **Delay:** 3-10 seconds - Sui testnet occasionally slow - High transaction
+  volume period - Nothing you can do - Usually resolves quickly
+</Accordion>
 
   <Accordion title="Bot overload">
     **Delay:** 10+ seconds
@@ -751,7 +736,8 @@ Get fresh menu with working buttons.
 </AccordionGroup>
 
 <Info>
-  **Sub-second execution** is ideal but not always possible. 1-2 second delays are normal and acceptable.
+  **Sub-second execution** is ideal but not always possible. 1-2 second delays
+  are normal and acceptable.
 </Info>
 
 ---
@@ -767,13 +753,21 @@ If this guide didn't solve your issue:
     Ask in Telegram community
   </Card>
 
-  <Card title="Report Bug" icon="bug" href="https://github.com/yourusername/deepmirror/issues">
-    File bug report on GitHub
-  </Card>
+<Card
+  title="Report Bug"
+  icon="bug"
+  href="https://github.com/yourusername/deepmirror/issues"
+>
+  File bug report on GitHub
+</Card>
 
-  <Card title="Email Support" icon="envelope" href="mailto:support@deepmirror.xyz">
-    Email support team
-  </Card>
+<Card
+  title="Email Support"
+  icon="envelope"
+  href="mailto:support@deepmirror.xyz"
+>
+  Email support team
+</Card>
 
   <Card title="Documentation" icon="book" href="/introduction">
     Re-read docs for clarity
@@ -802,17 +796,15 @@ Avoid issues before they happen:
     - Set low balance alerts
   </Step>
 
-  <Step title="Renew sessions proactively">
-    - Renew zkLogin every 6 days
-    - Don't wait for expiration
-    - Set calendar reminder
-  </Step>
+<Step title="Renew sessions proactively">
+  - Renew zkLogin every 6 days - Don't wait for expiration - Set calendar
+  reminder
+</Step>
 
-  <Step title="Monitor daily">
-    - Check `/positions` once per day
-    - Review `/wallet` balances
-    - Read all notifications
-  </Step>
+<Step title="Monitor daily">
+  - Check `/positions` once per day - Review `/wallet` balances - Read all
+  notifications
+</Step>
 
   <Step title="Stay updated">
     - Join [community channel](https://t.me/deepmirror_community)
@@ -828,9 +820,9 @@ Avoid issues before they happen:
     Protect your wallet
   </Card>
 
-  <Card title="Bot Commands" icon="terminal" href="/bot/commands">
-    Full command reference
-  </Card>
+<Card title="Bot Commands" icon="terminal" href="/bot/commands">
+  Full command reference
+</Card>
 
   <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
     Master copy trading

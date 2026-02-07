@@ -35,12 +35,12 @@ The positions screen displays all your active copy trades:
 
 ### Position States
 
-| Status | Meaning |
-|--------|---------|
-| **Active** ✅ | Position has orders on DeepBook V3 |
-| **Monitoring** 🔍 | Waiting for maker to place orders |
-| **Error** ❌ | Issue occurred (check details) |
-| **Inactive** ⏸️ | Temporarily paused |
+| Status            | Meaning                            |
+| ----------------- | ---------------------------------- |
+| **Active** ✅     | Position has orders on DeepBook V3 |
+| **Monitoring** 🔍 | Waiting for maker to place orders  |
+| **Error** ❌      | Issue occurred (check details)     |
+| **Inactive** ⏸️   | Temporarily paused                 |
 
 ## Position Details
 
@@ -65,6 +65,7 @@ Tap any position to view detailed information:
 ### Order Information
 
 For each order in the position:
+
 - **Side** - BID (buy) or ASK (sell)
 - **Price** - Limit price
 - **Quantity** - Order size
@@ -72,7 +73,8 @@ For each order in the position:
 - **Transaction Hash** - On-chain proof
 
 <Info>
-  Order details are fetched from DeepBook V3 in real-time. May take a few seconds to load.
+  Order details are fetched from DeepBook V3 in real-time. May take a few
+  seconds to load.
 </Info>
 
 ## Understanding Position Lifecycle
@@ -80,6 +82,7 @@ For each order in the position:
 ### 1. Creation Phase
 
 When maker opens a position:
+
 - Bot detects transaction
 - Creates position record
 - Status: **Monitoring** 🔍
@@ -88,6 +91,7 @@ When maker opens a position:
 ### 2. Order Placement
 
 When maker places their first order:
+
 - Bot places your corresponding order
 - Status changes to: **Active** ✅
 - Order count increments
@@ -96,6 +100,7 @@ When maker places their first order:
 ### 3. Active Monitoring
 
 While position is active:
+
 - Bot tracks maker's orders
 - Syncs your order count
 - Updates status in real-time
@@ -104,6 +109,7 @@ While position is active:
 ### 4. Order Updates
 
 When maker adds more orders:
+
 - Your order count increases
 - New orders placed automatically
 - Position remains active
@@ -112,6 +118,7 @@ When maker adds more orders:
 ### 5. Position Closure
 
 Positions can close when:
+
 - You manually close via bot
 - Maker closes their position
 - Maker becomes inactive
@@ -137,7 +144,8 @@ To manually close and stop copying:
 5. Position marked as closed
 
 <Warning>
-  Closing a position cancels all open orders but doesn't refund gas or fees already spent.
+  Closing a position cancels all open orders but doesn't refund gas or fees
+  already spent.
 </Warning>
 
 ### View on Explorer
@@ -167,13 +175,9 @@ Filter positions by status:
     Shows every position regardless of status.
   </Tab>
 
-  <Tab title="Active Only">
-    Shows positions with orders on DeepBook V3.
-  </Tab>
+<Tab title="Active Only">Shows positions with orders on DeepBook V3.</Tab>
 
-  <Tab title="Monitoring">
-    Shows positions waiting for maker's first order.
-  </Tab>
+<Tab title="Monitoring">Shows positions waiting for maker's first order.</Tab>
 
   <Tab title="Inactive">
     Shows paused or error positions.
@@ -195,6 +199,7 @@ Average per day: 4 orders
 ```
 
 This helps you understand:
+
 - Maker's trading frequency
 - Your capital deployment rate
 - Fee accumulation
@@ -215,6 +220,7 @@ By Maker:
 ### Time-Based Stats
 
 View position age and activity:
+
 - **Oldest position** - 7 days active
 - **Newest position** - 2 hours active
 - **Most active** - 45 orders in 3 days
@@ -228,13 +234,12 @@ View position age and activity:
 - **Per user:** 50 positions
 - **Recommended:** 5-10 active positions
 
-<Tip>
-  More positions = more complexity. Focus on quality over quantity!
-</Tip>
+<Tip>More positions = more complexity. Focus on quality over quantity!</Tip>
 
 ### Why Limit Positions?
 
 Managing too many positions can lead to:
+
 - Difficulty tracking performance
 - High gas fee accumulation
 - Capital spread too thin
@@ -340,27 +345,21 @@ View closed positions:
     - No data is lost
   </Accordion>
 
-  <Accordion title="I run out of SUI?">
-    - New orders cannot be placed
-    - Existing orders remain active
-    - Position marked with error status
-    - You receive low balance notification
-    - Refill SUI to resume
-  </Accordion>
+<Accordion title="I run out of SUI?">
+  - New orders cannot be placed - Existing orders remain active - Position
+  marked with error status - You receive low balance notification - Refill SUI
+  to resume
+</Accordion>
 
-  <Accordion title="I run out of DEEP?">
-    - Similar to SUI depletion
-    - Cannot pay DeepBook trading fees
-    - Existing orders unaffected
-    - Get DEEP to continue copying
-  </Accordion>
+<Accordion title="I run out of DEEP?">
+  - Similar to SUI depletion - Cannot pay DeepBook trading fees - Existing
+  orders unaffected - Get DEEP to continue copying
+</Accordion>
 
-  <Accordion title="Maker closes their position?">
-    - Your position remains active
-    - DeepMirror doesn't auto-close (yet)
-    - You should manually close via `/positions`
-    - Future: Auto-close feature planned
-  </Accordion>
+<Accordion title="Maker closes their position?">
+  - Your position remains active - DeepMirror doesn't auto-close (yet) - You
+  should manually close via `/positions` - Future: Auto-close feature planned
+</Accordion>
 
   <Accordion title="I revoke capability?">
     - Bot cannot place new orders
@@ -386,6 +385,7 @@ Track your copy trading performance:
 ### Benchmarking
 
 Compare your results to:
+
 - Maker's own performance
 - Other copiers (anonymized)
 - Market indices
@@ -402,14 +402,11 @@ Compare your results to:
     **Solution:** Wait a few seconds and refresh. If persists, check maker's address is correct.
   </Accordion>
 
-  <Accordion title="Order count not updating">
-    **Causes:**
-    - Maker hasn't placed new orders
-    - Network delay in fetching DeepBook data
-    - Position is inactive/paused
-    
-    **Solution:** Tap refresh icon. Check maker's recent transactions on Explorer.
-  </Accordion>
+<Accordion title="Order count not updating">
+  **Causes:** - Maker hasn't placed new orders - Network delay in fetching
+  DeepBook data - Position is inactive/paused **Solution:** Tap refresh icon.
+  Check maker's recent transactions on Explorer.
+</Accordion>
 
   <Accordion title="Can't close position">
     **Causes:**
@@ -451,6 +448,7 @@ Compare your results to:
 ### Red Flags
 
 Close or pause positions if:
+
 - ❌ Maker stops trading for 3+ days
 - ❌ Multiple failed orders in a row
 - ❌ Position losing money consistently
@@ -464,13 +462,13 @@ Close or pause positions if:
     Full command reference
   </Card>
 
-  <Card title="DeepBook V3" icon="book" href="/advanced/deepbook-v3">
-    Understand the protocol
-  </Card>
+<Card title="DeepBook V3" icon="book" href="/advanced/deepbook-v3">
+  Understand the protocol
+</Card>
 
-  <Card title="Security Guide" icon="shield" href="/advanced/security">
-    Protect your positions
-  </Card>
+<Card title="Security Guide" icon="shield" href="/advanced/security">
+  Protect your positions
+</Card>
 
   <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
     Fix common issues

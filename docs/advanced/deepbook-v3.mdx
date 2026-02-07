@@ -18,7 +18,8 @@ DeepBook is a **decentralized exchange protocol** built directly into the Sui bl
 - **Native Integration** - Built using Sui Move, optimized for performance
 
 <Info>
-  Unlike AMMs (Automated Market Makers like Uniswap), CLOBs use orderbooks where buyers and sellers place limit orders at specific prices.
+  Unlike AMMs (Automated Market Makers like Uniswap), CLOBs use orderbooks where
+  buyers and sellers place limit orders at specific prices.
 </Info>
 
 ## Architecture Overview
@@ -37,6 +38,7 @@ Pool: SUI/DBUSDC
 ```
 
 **Key properties:**
+
 - **Immutable** - Pool configuration doesn't change
 - **Permissionless** - Anyone can create pools
 - **Shared Object** - Multiple users interact simultaneously
@@ -56,11 +58,13 @@ Balances:
 ```
 
 **Purpose:**
+
 - Hold your trading capital
 - Enable fast order placement (no transfers per order)
 - Gas-efficient (batch operations)
 
 **Security:**
+
 - Only you control withdrawals
 - Bot needs **Capability** to place orders
 - Cannot withdraw without your permission
@@ -84,6 +88,7 @@ Cannot:
 ```
 
 **Revokable:**
+
 - You can revoke anytime
 - Immediately stops bot access
 - Capability object destroyed
@@ -105,6 +110,7 @@ Total: 10.5 DBUSDC (- fees)
 ```
 
 **Characteristics:**
+
 - Order sits in orderbook until filled
 - May fill partially
 - Can be canceled
@@ -136,14 +142,15 @@ Takes best BID prices
 placeOrder({
   pool: "0xABCD...",
   balanceManager: "0x5678...",
-  side: "BID",  // or "ASK"
+  side: "BID", // or "ASK"
   price: 0.95,
   quantity: 10,
-  payWithDeep: true
-})
+  payWithDeep: true,
+});
 ```
 
 **Transaction:**
+
 - Debits balance manager
 - Creates order object
 - Emits event
@@ -181,6 +188,7 @@ Matches your BID @ 0.95
 ```
 
 **Matching Engine:**
+
 - Price-time priority
 - Best price matched first
 - Orders at same price: first-come-first-served
@@ -196,6 +204,7 @@ Total Cost: 9.5 + 0.019 = 9.519 DBUSDC
 ```
 
 **Balance Manager Updated:**
+
 ```
 Before:
 SUI: 0
@@ -224,6 +233,7 @@ Actual DEEP deducted: ~0.02 DEEP (based on DEEP/DBUSDC rate)
 ```
 
 **Benefits:**
+
 - ✅ Lower fees (0.02% vs 0.03%)
 - ✅ Supports DeepBook ecosystem
 - ✅ DEEP has utility value
@@ -242,11 +252,13 @@ Deducted directly from quote token
 ```
 
 **Drawbacks:**
+
 - ❌ 50% higher fees
 - ❌ No ecosystem support
 
 <Tip>
-  **DeepMirror always uses DEEP tokens** (`payWithDeep: true`) for lower fees. Ensure you have DEEP balance!
+  **DeepMirror always uses DEEP tokens** (`payWithDeep: true`) for lower fees.
+  Ensure you have DEEP balance!
 </Tip>
 
 ## Pool States
@@ -270,6 +282,7 @@ Withdrawals: ✅ Allowed
 ```
 
 **Reasons for pausing:**
+
 - Maintenance
 - Security issue
 - Migration to V4
@@ -279,6 +292,7 @@ Withdrawals: ✅ Allowed
 ### Ticks and Lots
 
 **Tick Size** - Minimum price increment:
+
 ```
 Tick Size: 0.01 DBUSDC
 Valid Prices: 0.95, 0.96, 0.97...
@@ -286,6 +300,7 @@ Invalid: 0.955 (not multiple of tick)
 ```
 
 **Lot Size** - Minimum quantity increment:
+
 ```
 Lot Size: 0.1 SUI
 Valid Quantities: 0.1, 0.2, 1.5, 10.0...
@@ -308,6 +323,7 @@ Result: ❌ REJECTED (self-match)
 ```
 
 **Purpose:**
+
 - Prevent wash trading
 - Avoid unnecessary fees
 - Maintain market integrity
@@ -326,6 +342,7 @@ Next order: Nonce 44
 ```
 
 **Used for:**
+
 - Order ID generation
 - Preventing replays
 - Tracking order history
@@ -360,15 +377,15 @@ tx.add(
     side: maker.side,
     price: maker.price,
     quantity: yourQuantity,
-    payWithDeep: true,  // Always use DEEP
-    expiration: 0       // No expiration
-  })
+    payWithDeep: true, // Always use DEEP
+    expiration: 0, // No expiration
+  }),
 );
 
 // Sign with your zkLogin ephemeral key
 const result = await sui.signAndExecuteTransaction({
   transaction: tx,
-  signer: zkLoginSigner
+  signer: zkLoginSigner,
 });
 ```
 
@@ -380,7 +397,7 @@ DeepMirror polls DeepBook to sync order counts:
 // Every 30 seconds
 const orders = await deepbook.getOrders({
   pool: position.poolAddress,
-  owner: yourAddress
+  owner: yourAddress,
 });
 
 position.orderCount = orders.length;
@@ -400,6 +417,7 @@ Reset: Periodic (state wiped)
 ```
 
 **Use for:**
+
 - Testing strategies
 - Learning copy trading
 - Bot development
@@ -415,13 +433,15 @@ Audits: Production-grade
 ```
 
 **Requirements before mainnet:**
+
 - Security audit
 - Extensive testing
 - User documentation
 - Failsafe mechanisms
 
 <Warning>
-  **Never use mainnet until officially announced.** DeepMirror is currently testnet-only.
+  **Never use mainnet until officially announced.** DeepMirror is currently
+  testnet-only.
 </Warning>
 
 ## Resources
@@ -431,13 +451,21 @@ Audits: Production-grade
     Official DeepBook documentation
   </Card>
 
-  <Card title="Sui Explorer" icon="magnifying-glass" href="https://testnet.suivision.xyz">
-    View pools and transactions
-  </Card>
+<Card
+  title="Sui Explorer"
+  icon="magnifying-glass"
+  href="https://testnet.suivision.xyz"
+>
+  View pools and transactions
+</Card>
 
-  <Card title="DeepBook Testnet" icon="flask" href="https://testnet.deepbook.tech">
-    Test DeepBook trading interface
-  </Card>
+<Card
+  title="DeepBook Testnet"
+  icon="flask"
+  href="https://testnet.deepbook.tech"
+>
+  Test DeepBook trading interface
+</Card>
 
   <Card title="Move Reference" icon="code" href="https://github.com/MystenLabs/deepbookv3">
     DeepBook V3 smart contracts
@@ -451,9 +479,9 @@ Audits: Production-grade
     Gas and trading fee details
   </Card>
 
-  <Card title="Security Guide" icon="shield" href="/advanced/security">
-    Protect your positions
-  </Card>
+<Card title="Security Guide" icon="shield" href="/advanced/security">
+  Protect your positions
+</Card>
 
   <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
     Start copy trading

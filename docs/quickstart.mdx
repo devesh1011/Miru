@@ -11,7 +11,11 @@ Get your DeepMirror bot up and running in three simple steps.
 
 Open the DeepMirror bot in Telegram:
 
-<Card title="Launch DeepMirror Bot" icon="telegram" href="https://t.me/deepmirror_bot">
+<Card
+  title="Launch DeepMirror Bot"
+  icon="telegram"
+  href="https://t.me/deepmirror_bot"
+>
   Open @deepmirror_bot in Telegram
 </Card>
 
@@ -27,7 +31,8 @@ DeepMirror uses Sui's zkLogin for secure, passwordless authentication:
 4. Return to Telegram - your wallet is ready!
 
 <Note>
-  zkLogin creates a Sui wallet tied to your Google account. No seed phrases to remember!
+  zkLogin creates a Sui wallet tied to your Google account. No seed phrases to
+  remember!
 </Note>
 
 Your wallet address will be displayed in the chat. Save it for depositing funds.
@@ -58,6 +63,7 @@ Now you're ready to set up copy trading!
 ### Find a Maker Wallet
 
 Choose a wallet address you want to copy. You can:
+
 - Use a known profitable trader's address
 - Find makers on DeepBook V3 analytics
 - Test with your own maker wallet
@@ -75,7 +81,8 @@ Choose a wallet address you want to copy. You can:
 5. Tap **Activate** to start monitoring
 
 <Tip>
-  Start with a **10% ratio** for your first position to limit risk while you learn.
+  Start with a **10% ratio** for your first position to limit risk while you
+  learn.
 </Tip>
 
 ## Step 5: Monitor Your Positions
@@ -103,6 +110,7 @@ Your bot is now actively monitoring! Here's what to expect:
 ### Position Lifecycle
 
 Your copy positions will:
+
 - **Monitor** - Track maker's active orders
 - **Execute** - Place orders when maker does
 - **Update** - Sync order counts in real-time
@@ -124,13 +132,13 @@ Here's a complete example:
 
 ## Quick Commands Reference
 
-| Command | What It Does |
-|---------|--------------|
-| `/start` | Main menu |
-| `/wallet` | View wallet and balance |
-| `/copy` | Manage copy trading settings |
-| `/positions` | View all active positions |
-| `/help` | Get help and support |
+| Command      | What It Does                 |
+| ------------ | ---------------------------- |
+| `/start`     | Main menu                    |
+| `/wallet`    | View wallet and balance      |
+| `/copy`      | Manage copy trading settings |
+| `/positions` | View all active positions    |
+| `/help`      | Get help and support         |
 
 ## Troubleshooting
 
@@ -139,16 +147,15 @@ Here's a complete example:
     Make sure you completed the OAuth flow in your browser. If stuck, tap **Sign in with Google** again.
   </Accordion>
 
-  <Accordion title="Position not copying">
-    Check:
-    - Do you have enough SUI for gas?
-    - Do you have DEEP tokens for trading fees?
-    - Is your copy trading activated? (check with `/copy`)
-  </Accordion>
+<Accordion title="Position not copying">
+  Check: - Do you have enough SUI for gas? - Do you have DEEP tokens for trading
+  fees? - Is your copy trading activated? (check with `/copy`)
+</Accordion>
 
-  <Accordion title="zkLogin session expired">
-    Sessions expire after 7 days. Simply sign in with Google again - your wallet remains the same!
-  </Accordion>
+<Accordion title="zkLogin session expired">
+  Sessions expire after 7 days. Simply sign in with Google again - your wallet
+  remains the same!
+</Accordion>
 
   <Accordion title="Transaction failed">
     Most common causes:
@@ -166,13 +173,17 @@ Here's a complete example:
     Learn about zkLogin and balances
   </Card>
 
-  <Card title="Copy Trading Deep Dive" icon="magnifying-glass" href="/bot/copy-trading">
-    Master position sizing strategies
-  </Card>
+<Card
+  title="Copy Trading Deep Dive"
+  icon="magnifying-glass"
+  href="/bot/copy-trading"
+>
+  Master position sizing strategies
+</Card>
 
-  <Card title="Position Tracking" icon="chart-line" href="/bot/positions">
-    Understand position monitoring
-  </Card>
+<Card title="Position Tracking" icon="chart-line" href="/bot/positions">
+  Understand position monitoring
+</Card>
 
   <Card title="DeepBook V3 Guide" icon="book" href="/advanced/deepbook-v3">
     Learn the underlying protocol
@@ -180,5 +191,6 @@ Here's a complete example:
 </CardGroup>
 
 <Note>
-  DeepMirror is in active development. Join our [Telegram community](https://t.me/deepmirror_community) for updates and support!
+  DeepMirror is in active development. Join our [Telegram
+  community](https://t.me/deepmirror_community) for updates and support!
 </Note>
