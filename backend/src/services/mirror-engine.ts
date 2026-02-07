@@ -325,7 +325,7 @@ export class MirrorEngine {
             price: makerOrder.price,
             quantity: mirroredQuantity,
             isBid: makerOrder.isBid,
-            clientOrderId: Date.now().toString(),
+            clientOrderId: Date.now(),
           }),
         {
           maxRetries: 2,

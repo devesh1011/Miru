@@ -63,15 +63,10 @@ export {
   type RiskCheckResult,
 } from "./risk-manager.js";
 
-// Demo Mode - Simulated trading for hackathon demos
-export { DemoSimulator, demoSimulator, DEMO_MAKERS } from "./demo-simulator.js";
-export { seedDemoData, clearDemoData } from "./demo-seeder.js";
-
 // Import singletons for use in functions below
 import { mirrorEngine as _mirrorEngine } from "./mirror-engine.js";
 import { eventMonitor as _eventMonitor } from "./event-monitor.js";
 import { smartNotifier as _smartNotifier } from "./smart-notifier.js";
-import { demoSimulator as _demoSimulator } from "./demo-simulator.js";
 
 /**
  * Initialize all services
@@ -97,7 +92,6 @@ export async function initializeServices(): Promise<void> {
 export function shutdownServices(): void {
   console.log("Shutting down Miru services...");
 
-  _demoSimulator.stop();
   _smartNotifier.stop();
   _mirrorEngine.stop();
   _eventMonitor.stop();
