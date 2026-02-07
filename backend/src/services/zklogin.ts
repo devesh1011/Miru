@@ -13,6 +13,7 @@
  */
 
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { Transaction } from "@mysten/sui/transactions";
 import {
   generateNonce,
@@ -124,9 +125,11 @@ export class ZkLoginService {
     );
 
     // Store session in DB (serialize keypair as base64 secret key)
-    // getSecretKey() returns 64 bytes, but we only need the first 32 (the seed)
-    const secretKeyBytes = ephemeralKeypair.getSecretKey().slice(0, 32);
-    const serializedKeypair = Buffer.from(secretKeyBytes).toString("base64");
+    // getSecretKey() returns a Bech32 string (suiprivkey1...); decode it to get the raw 32-byte seed
+    const { secretKey: rawSeed } = decodeSuiPrivateKey(
+      ephemeralKeypair.getSecretKey(),
+    );
+    const serializedKeypair = Buffer.from(rawSeed).toString("base64");
 
     userRepo.saveZkLoginSession(telegramId, {
       ephemeralKeypair: serializedKeypair,
@@ -568,8 +571,9 @@ export class ZkLoginService {
    * Serialize an Ed25519Keypair to base64 string
    */
   serializeKeypair(keypair: Ed25519Keypair): string {
-    // getSecretKey() returns 64 bytes, but we only need the first 32 (the seed)
-    return Buffer.from(keypair.getSecretKey().slice(0, 32)).toString("base64");
+    // getSecretKey() returns a Bech32 string; decode to get the raw 32-byte seed
+    const { secretKey: rawSeed } = decodeSuiPrivateKey(keypair.getSecretKey());
+    return Buffer.from(rawSeed).toString("base64");
   }
 
   /**
