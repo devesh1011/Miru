@@ -6,6 +6,11 @@ import {
   isRetryableError,
   withRetry,
 } from "../utils/errors.js";
+import { analyticsService } from "./analytics.js";
+import { riskManager } from "./risk-manager.js";
+import { smartNotifier } from "./smart-notifier.js";
+import { positionRepo } from "../db/repository.js";
+import { zkLoginService } from "./zklogin.js";
 
 /**
  * Maker order detected from DeepBook events
@@ -201,8 +206,62 @@ export class MirrorEngine {
       }
 
       try {
+        // Pre-trade risk check
+        const riskCheck = await riskManager.checkPreTrade(
+          position.owner,
+          position.positionId,
+          position.poolKey,
+          (event.quantity * position.ratio) / 100,
+          event.price,
+        );
+
+        if (!riskCheck.allowed) {
+          console.log(`   Risk check blocked: ${riskCheck.reason}`);
+          results.push({
+            positionId: position.positionId,
+            makerOrderId: event.orderId,
+            mirroredOrderId: "",
+            price: event.price,
+            quantity: 0,
+            isBid: event.isBid,
+            txDigest: "",
+            success: false,
+            error: `Risk limit: ${riskCheck.reason}`,
+          });
+          continue;
+        }
+
         const result = await this.executeMirrorOrder(position, event);
         results.push(result);
+
+        // Post-trade: record analytics & notify
+        try {
+          const dbPosition = await positionRepo.getById(position.positionId);
+          const userTelegramId = dbPosition?.user_telegram_id || position.owner;
+
+          await analyticsService.recordOrderExecution(
+            position.positionId,
+            userTelegramId,
+            result.price,
+            result.quantity,
+            result.isBid,
+            result.success,
+          );
+
+          // Smart notification with P&L context
+          await smartNotifier.notifyOrderExecuted(result);
+
+          // Post-trade risk checks (stop loss, take profit)
+          if (result.success) {
+            await riskManager.checkPostTrade(
+              userTelegramId,
+              position.positionId,
+              position.poolKey,
+            );
+          }
+        } catch (analyticsError) {
+          console.error(`   Analytics/notification error:`, analyticsError);
+        }
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -408,11 +467,26 @@ export class MirrorEngine {
   }
 
   /**
-   * Stop mirroring a position
+   * Stop mirroring a position.
+   * If telegramId is provided, signs the on-chain tx via zkLogin (user-owned object).
+   * Otherwise falls back to backend signer (only works for backend-owned objects).
    */
-  async stopMirroring(positionId: string): Promise<string> {
-    // Toggle active to false on-chain
-    const txDigest = await mirrorContractService.toggleActive(positionId);
+  async stopMirroring(
+    positionId: string,
+    telegramId?: string,
+  ): Promise<string> {
+    let txDigest: string;
+
+    if (telegramId) {
+      // User-owned position: sign via zkLogin
+      txDigest = await zkLoginService.signAndExecute(
+        telegramId,
+        mirrorContractService.buildToggleActive(positionId),
+      );
+    } else {
+      // Backend-owned position: direct signing
+      txDigest = await mirrorContractService.toggleActive(positionId);
+    }
 
     // Update local tracking
     for (const positions of this.trackedPositions.values()) {
@@ -428,11 +502,23 @@ export class MirrorEngine {
   }
 
   /**
-   * Resume mirroring a position
+   * Resume mirroring a position.
+   * If telegramId is provided, signs the on-chain tx via zkLogin.
    */
-  async resumeMirroring(positionId: string): Promise<string> {
-    // Toggle active to true on-chain
-    const txDigest = await mirrorContractService.toggleActive(positionId);
+  async resumeMirroring(
+    positionId: string,
+    telegramId?: string,
+  ): Promise<string> {
+    let txDigest: string;
+
+    if (telegramId) {
+      txDigest = await zkLoginService.signAndExecute(
+        telegramId,
+        mirrorContractService.buildToggleActive(positionId),
+      );
+    } else {
+      txDigest = await mirrorContractService.toggleActive(positionId);
+    }
 
     // Update local tracking
     for (const positions of this.trackedPositions.values()) {
@@ -448,15 +534,17 @@ export class MirrorEngine {
   }
 
   /**
-   * Close a mirror position completely
+   * Close a mirror position completely.
+   * If telegramId is provided, signs the on-chain tx via zkLogin.
    */
-  async closePosition(positionId: string): Promise<string> {
+  async closePosition(
+    positionId: string,
+    telegramId?: string,
+  ): Promise<string> {
     // First, cancel all active orders for this position
     const positionData = await mirrorContractService.getPosition(positionId);
 
     if (positionData && positionData.activeOrders.length > 0) {
-      // Cancel orders via DeepBook SDK
-      // Then clear orders in contract using capability if available
       const trackedPos = this.findTrackedPosition(positionId);
       if (trackedPos?.capabilityId) {
         await mirrorContractService.clearOrdersWithCapability(
@@ -468,8 +556,15 @@ export class MirrorEngine {
       }
     }
 
-    // Close position on-chain
-    const txDigest = await mirrorContractService.closePosition(positionId);
+    let txDigest: string;
+    if (telegramId) {
+      txDigest = await zkLoginService.signAndExecute(
+        telegramId,
+        mirrorContractService.buildClosePosition(positionId),
+      );
+    } else {
+      txDigest = await mirrorContractService.closePosition(positionId);
+    }
 
     // Unregister from tracking
     this.unregisterPosition(positionId);

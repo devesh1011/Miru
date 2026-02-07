@@ -1,5 +1,5 @@
 /**
- * DeepMirror Services
+ * Miru Services
  *
  * Main service exports for the mirroring backend
  */
@@ -50,21 +50,43 @@ export {
 // Transaction Builder - Builds unsigned PTBs for zkLogin users
 export { TxBuilderService, txBuilderService } from "./tx-builder.js";
 
+// Analytics - P&L tracking and portfolio analytics
+export { AnalyticsService, analyticsService } from "./analytics.js";
+
+// Smart Notifier - Enhanced notifications with P&L context
+export { SmartNotificationService, smartNotifier } from "./smart-notifier.js";
+
+// Risk Manager - Pre/post-trade risk checks
+export {
+  RiskManagementService,
+  riskManager,
+  type RiskCheckResult,
+} from "./risk-manager.js";
+
+// Demo Mode - Simulated trading for hackathon demos
+export { DemoSimulator, demoSimulator, DEMO_MAKERS } from "./demo-simulator.js";
+export { seedDemoData, clearDemoData } from "./demo-seeder.js";
+
 // Import singletons for use in functions below
 import { mirrorEngine as _mirrorEngine } from "./mirror-engine.js";
 import { eventMonitor as _eventMonitor } from "./event-monitor.js";
+import { smartNotifier as _smartNotifier } from "./smart-notifier.js";
+import { demoSimulator as _demoSimulator } from "./demo-simulator.js";
 
 /**
  * Initialize all services
  */
 export async function initializeServices(): Promise<void> {
-  console.log("Initializing DeepMirror services...");
+  console.log("Initializing Miru services...");
 
   // Start event monitor (listens for DeepBook events)
   await _eventMonitor.start();
 
   // Start mirror engine (processes events and executes mirrors)
   await _mirrorEngine.start();
+
+  // Start smart notifier (periodic balance checks, daily summaries)
+  _smartNotifier.start();
 
   console.log("All services initialized");
 }
@@ -73,8 +95,10 @@ export async function initializeServices(): Promise<void> {
  * Shutdown all services gracefully
  */
 export function shutdownServices(): void {
-  console.log("Shutting down DeepMirror services...");
+  console.log("Shutting down Miru services...");
 
+  _demoSimulator.stop();
+  _smartNotifier.stop();
   _mirrorEngine.stop();
   _eventMonitor.stop();
 

@@ -175,24 +175,33 @@ export class PositionManagerService {
 
   /**
    * Pause mirroring for a position
+   * @param telegramId - Required for user-owned (zkLogin) positions
    */
-  async pausePosition(positionId: string): Promise<string> {
-    const txDigest = await mirrorEngine.stopMirroring(positionId);
+  async pausePosition(
+    positionId: string,
+    telegramId?: string,
+  ): Promise<string> {
+    const txDigest = await mirrorEngine.stopMirroring(positionId, telegramId);
     console.log(`Paused position ${positionId}`);
     return txDigest;
   }
 
   /**
    * Resume mirroring for a position
+   * @param telegramId - Required for user-owned (zkLogin) positions
    */
-  async resumePosition(positionId: string): Promise<string> {
-    const txDigest = await mirrorEngine.resumeMirroring(positionId);
+  async resumePosition(
+    positionId: string,
+    telegramId?: string,
+  ): Promise<string> {
+    const txDigest = await mirrorEngine.resumeMirroring(positionId, telegramId);
     console.log(`Resumed position ${positionId}`);
     return txDigest;
   }
 
   /**
    * Close a position and cleanup
+   * @param telegramId - Required for user-owned (zkLogin) positions
    */
   async closePosition(positionId: string): Promise<string> {
     // Get position data before closing
