@@ -220,19 +220,66 @@ export class SuiService {
   }
 
   /**
-   * Reinitialize client with balance managers
-   * Call this after creating a BalanceManager to register it with the SDK
+   * Reinitialize client with balance managers (merges with existing)
+   * Call this after creating a BalanceManager to register it with the SDK.
+   * The SDK's generateProof() auto-selects owner vs trader proof based on
+   * whether tradeCap is set in the BalanceManager config.
    */
+  private registeredManagers: Record<string, BalanceManager> = {};
+
   reinitialize(balanceManagers: Record<string, BalanceManager>): void {
     const rpcUrl =
       config.sui.network === "mainnet"
         ? "https://fullnode.mainnet.sui.io:443"
         : "https://fullnode.testnet.sui.io:443";
 
-    this.client = this.createExtendedClient(rpcUrl, balanceManagers);
+    // Merge with existing managers so we don't lose previously registered ones
+    this.registeredManagers = {
+      ...this.registeredManagers,
+      ...balanceManagers,
+    };
+
+    this.client = this.createExtendedClient(rpcUrl, this.registeredManagers);
     console.log(
-      `Reinitialized with ${Object.keys(balanceManagers).length} balance manager(s)`,
+      `Reinitialized with ${Object.keys(this.registeredManagers).length} balance manager(s)`,
     );
+  }
+
+  /**
+   * Get all currently registered balance managers
+   */
+  getRegisteredManagers(): Record<string, BalanceManager> {
+    return { ...this.registeredManagers };
+  }
+
+  /**
+   * Create a temporary DeepBook SDK context for building user-signed transactions.
+   * This is configured with the USER's address (not the backend), so the SDK
+   * generates correct Move calls (e.g., coin splitting from user's wallet).
+   * Does NOT affect the global client or backend signing.
+   */
+  createUserContext(
+    userAddress: string,
+    balanceManagers?: Record<string, BalanceManager>,
+  ): DeepBookClient {
+    const rpcUrl =
+      config.sui.network === "mainnet"
+        ? "https://fullnode.mainnet.sui.io:443"
+        : "https://fullnode.testnet.sui.io:443";
+
+    const tempClient = new SuiGrpcClient({
+      network: this.network,
+      baseUrl: rpcUrl,
+    }).$extend(
+      deepbook({
+        address: userAddress,
+        balanceManagers,
+        coins: this.network === "mainnet" ? mainnetCoins : testnetCoins,
+        pools: this.network === "mainnet" ? mainnetPools : testnetPools,
+      }),
+    ) as DeepBookExtendedClient;
+
+    return tempClient.deepbook;
   }
 }
 

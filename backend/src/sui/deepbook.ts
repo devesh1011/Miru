@@ -111,7 +111,7 @@ export class DeepBookService {
     price: number;
     quantity: number;
     isBid: boolean;
-    clientOrderId?: string;
+    clientOrderId?: number | string;
     expiration?: number;
     orderType?: OrderType;
     selfMatchingOption?: SelfMatchingOptions;
@@ -123,7 +123,10 @@ export class DeepBookService {
     const sdkParams: PlaceLimitOrderParams = {
       poolKey: params.poolKey,
       balanceManagerKey: params.managerKey,
-      clientOrderId: params.clientOrderId || Date.now().toString(),
+      clientOrderId:
+        params.clientOrderId !== undefined
+          ? String(params.clientOrderId)
+          : String(Date.now()),
       price: params.price,
       quantity: params.quantity,
       isBid: params.isBid,
@@ -147,7 +150,7 @@ export class DeepBookService {
     managerKey: string;
     quantity: number;
     isBid: boolean;
-    clientOrderId?: string;
+    clientOrderId?: number | string;
     selfMatchingOption?: SelfMatchingOptions;
     payWithDeep?: boolean;
   }): Promise<string> {
@@ -157,7 +160,10 @@ export class DeepBookService {
     const sdkParams: PlaceMarketOrderParams = {
       poolKey: params.poolKey,
       balanceManagerKey: params.managerKey,
-      clientOrderId: params.clientOrderId || Date.now().toString(),
+      clientOrderId:
+        params.clientOrderId !== undefined
+          ? String(params.clientOrderId)
+          : String(Date.now()),
       quantity: params.quantity,
       isBid: params.isBid,
       selfMatchingOption:
