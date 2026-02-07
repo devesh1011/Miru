@@ -1,0 +1,548 @@
+---
+title: "Bot Commands"
+description: "Complete reference of all DeepMirror bot commands"
+---
+
+# Bot Commands Reference
+
+Complete guide to all DeepMirror Telegram bot commands and menu interactions.
+
+## Quick Reference
+
+| Command | Description | Shortcut |
+|---------|-------------|----------|
+| `/start` | Open main menu | - |
+| `/wallet` | View wallet and balances | 🔐 |
+| `/copy` | Manage copy trading | 📊 |
+| `/positions` | View active positions | 📈 |
+| `/help` | Get help and support | ❓ |
+| `/settings` | Bot preferences | ⚙️ |
+
+## Main Menu Commands
+
+### `/start`
+
+Opens the main menu with quick access to all features.
+
+**Usage:**
+```
+/start
+```
+
+**Response:**
+```
+🤖 DeepMirror Bot
+
+Copy trade DeepBook V3 with millisecond precision!
+
+Choose an option:
+
+🔐 Wallet - View wallet and balances
+📊 Copy Trading - Manage makers
+📈 Positions - Track copy trades
+❓ Help - Get support
+```
+
+<Tip>
+  You can always return to the main menu by typing `/start`.
+</Tip>
+
+---
+
+## Wallet Commands
+
+### `/wallet`
+
+View your wallet address, balances, and zkLogin status.
+
+**Usage:**
+```
+/wallet
+```
+
+**Response:**
+```
+💼 Your Wallet
+
+Address: 0x1a2b3c4d5e6f7890abcdef...
+SUI Balance: 2.45 SUI
+DEEP Balance: 150.00 DEEP
+
+zkLogin: ✅ Active (expires in 5 days)
+
+Actions:
+↻ Refresh Balance
+🔑 Export Wallet
+🔐 Sign in with Google
+🔒 Manage Capabilities
+```
+
+**Options:**
+
+<AccordionGroup>
+  <Accordion title="↻ Refresh Balance">
+    Updates SUI and DEEP balances from blockchain.
+    
+    **When to use:**
+    - After depositing tokens
+    - Before starting copy trading
+    - If balance seems outdated
+  </Accordion>
+
+  <Accordion title="🔑 Export Wallet">
+    Exports your wallet private key for importing to other Sui wallets.
+    
+    **Security:** Keep private key safe! Anyone with it controls your funds.
+  </Accordion>
+
+  <Accordion title="🔐 Sign in with Google">
+    Initiates zkLogin authentication flow.
+    
+    **Steps:**
+    1. Click auth link
+    2. Approve Google OAuth
+    3. Copy redirect URL
+    4. Paste back in bot
+  </Accordion>
+
+  <Accordion title="🔒 Manage Capabilities">
+    View and revoke bot trading permissions.
+    
+    **Use cases:**
+    - Check active capabilities
+    - Revoke if stopping copy trading
+    - See which positions use which capability
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Copy Trading Commands
+
+### `/copy`
+
+Manage makers you want to copy trade.
+
+**Usage:**
+```
+/copy
+```
+
+**Response:**
+```
+📊 Copy Trading
+
+Active Makers (2):
+
+1. Maker A (0x1a2b...)
+   Ratio: 10%
+   Status: ✅ Active
+   Positions: 3
+
+2. Maker B (0x7f8e...)
+   Ratio: 25%
+   Status: ⏸️ Paused
+   Positions: 1
+
+Actions:
+➕ Add Maker
+⚙️ Configure
+🗑️ Remove Maker
+```
+
+**Subcommands:**
+
+<Accordion title="➕ Add Maker">
+  **Steps:**
+  1. Tap **Add Maker**
+  2. Enter Sui wallet address:
+     ```
+     0x1a2b3c4d5e6f7890abcdef...
+     ```
+  3. Confirm addition
+  4. Maker added (inactive by default)
+  5. Configure and activate
+
+  **Validation:**
+  - Must be valid Sui address (0x + 64 hex chars)
+  - Can't add duplicate
+  - Max 10 makers per user
+</Accordion>
+
+<Accordion title="⚙️ Configure">
+  Set position sizing for a maker.
+  
+  **Options:**
+  
+  1️⃣ **Fixed Ratio**
+  - Copy at percentage of maker's size
+  - Example: 10% ratio = 10 SUI when maker uses 100 SUI
+  - Best for consistent risk management
+  
+  2️⃣ **Fixed Amount**
+  - Always use same SUI amount
+  - Example: 5 SUI per position regardless of maker's size
+  - Best for capital preservation
+  
+  3️⃣ **Match Maker**
+  - Copy exact position size
+  - Example: Maker uses 50 SUI → You use 50 SUI
+  - Best for high conviction
+  
+  After configuring, tap **✅ Activate** to start monitoring.
+</Accordion>
+
+<Accordion title="🗑️ Remove Maker">
+  Permanently delete a maker from your list.
+  
+  **Effect:**
+  - Stops monitoring immediately
+  - Existing positions remain (close manually)
+  - Configuration deleted
+  - Can re-add later with new config
+  
+  **Confirmation:**
+  ```
+  ⚠️ Remove Maker?
+  
+  Maker: 0x1a2b...
+  Active Positions: 2
+  
+  Note: Existing positions will NOT be closed.
+  Close them manually via /positions.
+  
+  Confirm removal?
+  ```
+</Accordion>
+
+---
+
+## Position Commands
+
+### `/positions`
+
+View and manage all your copy trading positions.
+
+**Usage:**
+```
+/positions
+```
+
+**Response:**
+```
+📈 Your Active Positions (3)
+
+1️⃣ SUI/DBUSDC
+   Maker: 0x1a2b...
+   Size: 10 SUI (10% ratio)
+   Orders: 5
+   Status: Active ✅
+   Created: 2h ago
+
+2️⃣ DEEP/SUI
+   Maker: 0x7f8e...
+   Size: 25 SUI (25% ratio)
+   Orders: 1
+   Status: Active ✅
+   Created: 30m ago
+
+3️⃣ SUI/USDC
+   Maker: 0x1a2b...
+   Size: 5 SUI (10% ratio)
+   Orders: 0
+   Status: Monitoring 🔍
+   Created: 10m ago
+
+Actions:
+🔍 View Details
+🛑 Close Position
+↻ Refresh All
+```
+
+**Position Actions:**
+
+<AccordionGroup>
+  <Accordion title="🔍 View Details">
+    See complete information about a position:
+    
+    ```
+    Position #42: SUI/DBUSDC
+    
+    Maker: 0x1a2b3c4d...
+    Pool: 0xABCD1234...
+    Size: 10 SUI
+    Ratio: 10%
+    Orders: 5 active
+    
+    Order Details:
+    1. BID @ 0.95 - 2 SUI
+    2. BID @ 0.94 - 2 SUI
+    3. BID @ 0.93 - 2 SUI
+    4. ASK @ 1.05 - 2 SUI
+    5. ASK @ 1.06 - 2 SUI
+    
+    Created: Feb 7, 2026 10:30 AM
+    Last Update: Feb 7, 2026 12:45 PM
+    
+    🔗 View on Explorer
+    ```
+  </Accordion>
+
+  <Accordion title="🛑 Close Position">
+    Manually close a position and cancel all orders.
+    
+    **Process:**
+    1. Select position to close
+    2. Review details
+    3. Tap **Confirm Close**
+    4. Transaction submitted to DeepBook
+    5. All orders canceled
+    6. Position marked as closed
+    7. Confirmation message sent
+    
+    **Cost:** ~0.02-0.05 SUI in gas fees
+    
+    **Note:** Closing doesn't refund trading fees already paid.
+  </Accordion>
+
+  <Accordion title="↻ Refresh All">
+    Updates order counts and statuses for all positions.
+    
+    **When to use:**
+    - After maker places new orders
+    - If order counts seem outdated
+    - Before making decisions
+    
+    **Time:** 3-5 seconds to query DeepBook for all positions
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Help & Support Commands
+
+### `/help`
+
+Access help documentation and support.
+
+**Usage:**
+```
+/help
+```
+
+**Response:**
+```
+❓ Help & Support
+
+📚 Quick Guides:
+• Getting Started
+• Copy Trading Setup
+• Understanding Positions
+• Wallet Management
+• Troubleshooting
+
+🔗 Resources:
+• Documentation: docs.deepmirror.xyz
+• Telegram Community: t.me/deepmirror
+• GitHub: github.com/yourusername/deepmirror
+
+💬 Get Help:
+• Report Bug
+• Feature Request
+• Contact Support
+```
+
+---
+
+## Settings Commands
+
+### `/settings`
+
+Configure bot preferences and notifications.
+
+**Usage:**
+```
+/settings
+```
+
+**Response:**
+```
+⚙️ Bot Settings
+
+Notifications:
+✅ Position Created
+✅ Order Placed
+✅ Low Balance Warning
+❌ Daily Summary
+
+Display:
+Language: English
+Timezone: UTC-8
+Number Format: 2 decimals
+
+Privacy:
+✅ Show wallet in screenshots
+❌ Analytics tracking
+
+Actions:
+💾 Save Settings
+🔄 Reset to Default
+```
+
+**Notification Settings:**
+
+<CardGroup cols={2}>
+  <Card title="Position Created">
+    Alert when new copy position starts.
+    
+    **Recommended:** ✅ Enabled
+  </Card>
+
+  <Card title="Order Placed">
+    Alert for each order execution.
+    
+    **Recommended:** ✅ Enabled (can be noisy for active makers)
+  </Card>
+
+  <Card title="Low Balance">
+    Warning when SUI < 0.1 or DEEP < 5.
+    
+    **Recommended:** ✅ Enabled (critical)
+  </Card>
+
+  <Card title="Daily Summary">
+    End-of-day position summary.
+    
+    **Recommended:** ❌ Disabled (optional)
+  </Card>
+</CardGroup>
+
+---
+
+## Advanced Commands
+
+### Position Filters
+
+Filter positions by status:
+
+```
+/positions active      # Only active positions
+/positions monitoring  # Only monitoring positions
+/positions all         # All positions (default)
+```
+
+### Quick Actions
+
+Some actions have keyboard shortcuts:
+
+| Shortcut | Action |
+|----------|--------|
+| `W` | Open wallet |
+| `C` | Open copy trading |
+| `P` | Open positions |
+| `H` | Open help |
+
+<Note>
+  Shortcuts work in the main menu only.
+</Note>
+
+---
+
+## Command Chaining
+
+Perform multiple actions quickly:
+
+```
+/wallet > Refresh > View Balance > Done
+/copy > Add Maker > Configure > Activate
+/positions > Select #3 > View Details > Close
+```
+
+The bot remembers context between commands.
+
+---
+
+## Inline Queries (Coming Soon)
+
+Search and manage from any Telegram chat:
+
+```
+@deepmirror_bot positions
+@deepmirror_bot balance
+@deepmirror_bot maker 0x1a2b...
+```
+
+Results appear inline, tap to open full menu.
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not working">
+    **Try:**
+    1. Type `/start` to reset
+    2. Check for typos (commands are case-sensitive)
+    3. Restart Telegram app
+    4. Contact support if persists
+  </Accordion>
+
+  <Accordion title="Buttons not responding">
+    **Causes:**
+    - Old message (buttons expire after 48h)
+    - Bot restarted (sessions cleared)
+    
+    **Solution:** Type `/start` to get fresh menu.
+  </Accordion>
+
+  <Accordion title="Missing commands">
+    **Possible reasons:**
+    - Bot not fully initialized
+    - Telegram cache issue
+    
+    **Solution:**
+    1. Send any message to bot
+    2. Type `/start`
+    3. All commands should appear in menu
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Keyboard Shortcuts
+
+In-chat shortcuts for power users:
+
+| Input | Result |
+|-------|--------|
+| `w` or `wallet` | `/wallet` |
+| `c` or `copy` | `/copy` |
+| `p` or `pos` | `/positions` |
+| `h` or `help` | `/help` |
+| `?` | `/help` |
+
+<Tip>
+  Shortcuts are **not** case-sensitive. `W`, `w`, and `wallet` all work.
+</Tip>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Wallet Guide" icon="wallet" href="/bot/wallet">
+    Complete wallet management
+  </Card>
+
+  <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
+    Setup and strategies
+  </Card>
+
+  <Card title="Position Management" icon="chart-line" href="/bot/positions">
+    Track your trades
+  </Card>
+
+  <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
+    Fix common issues
+  </Card>
+</CardGroup>

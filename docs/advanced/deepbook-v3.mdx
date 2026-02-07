@@ -1,0 +1,461 @@
+---
+title: "DeepBook V3 Protocol"
+description: "Understanding the DeepBook V3 central limit order book on Sui"
+---
+
+# DeepBook V3 Protocol
+
+DeepBook V3 is Sui's native on-chain central limit order book (CLOB). DeepMirror executes all copy trades through this protocol.
+
+## What is DeepBook?
+
+DeepBook is a **decentralized exchange protocol** built directly into the Sui blockchain:
+
+- **Central Limit Order Book (CLOB)** - Traditional orderbook model like CEXs
+- **On-Chain Settlement** - All trades execute on Sui blockchain
+- **Shared Liquidity** - Aggregated pools accessible to all applications
+- **Low Latency** - Sub-second order placement and matching
+- **Native Integration** - Built using Sui Move, optimized for performance
+
+<Info>
+  Unlike AMMs (Automated Market Makers like Uniswap), CLOBs use orderbooks where buyers and sellers place limit orders at specific prices.
+</Info>
+
+## Architecture Overview
+
+### Pools
+
+Each trading pair has a **pool**:
+
+```
+Pool: SUI/DBUSDC
+- Base Asset: SUI
+- Quote Asset: DBUSDC
+- Pool Address: 0xABCD1234...
+- Tick Size: 0.01 DBUSDC
+- Lot Size: 0.1 SUI
+```
+
+**Key properties:**
+- **Immutable** - Pool configuration doesn't change
+- **Permissionless** - Anyone can create pools
+- **Shared Object** - Multiple users interact simultaneously
+
+### Balance Managers
+
+Users deposit assets into a **Balance Manager**:
+
+```
+Balance Manager: 0x5678ABCD...
+Owner: 0x1a2b3c4d... (your address)
+
+Balances:
+- SUI: 50
+- DBUSDC: 1000
+- DEEP: 200
+```
+
+**Purpose:**
+- Hold your trading capital
+- Enable fast order placement (no transfers per order)
+- Gas-efficient (batch operations)
+
+**Security:**
+- Only you control withdrawals
+- Bot needs **Capability** to place orders
+- Cannot withdraw without your permission
+
+### Capabilities
+
+**Capability objects** grant specific permissions:
+
+```
+Capability: 0xCDEF5678...
+Grants to: 0x9a8b7c6d... (bot address)
+Can:
+- Place orders in your name
+- Use your balance manager
+- Access DeepBook pools
+
+Cannot:
+- Withdraw your funds
+- Transfer assets
+- Approve other transactions
+```
+
+**Revokable:**
+- You can revoke anytime
+- Immediately stops bot access
+- Capability object destroyed
+
+## Order Types
+
+### Limit Orders
+
+Place order at specific price:
+
+```
+BID Order:
+Buy 10 SUI at 0.95 DBUSDC each
+Total: 9.5 DBUSDC (+ fees)
+
+ASK Order:
+Sell 10 SUI at 1.05 DBUSDC each
+Total: 10.5 DBUSDC (- fees)
+```
+
+**Characteristics:**
+- Order sits in orderbook until filled
+- May fill partially
+- Can be canceled
+- Maker fee applies (lower than taker)
+
+### Market Orders (Not Used by DeepMirror)
+
+Immediately match best available price:
+
+```
+Market BID:
+Buy 10 SUI at whatever price available
+Could fill at 0.96, 0.97, 0.98... (slippage)
+
+Market ASK:
+Sell 10 SUI immediately
+Takes best BID prices
+```
+
+<Note>
+  DeepMirror **only places limit orders** to copy maker's exact strategy.
+</Note>
+
+## Order Lifecycle
+
+### 1. Order Placement
+
+```typescript
+placeOrder({
+  pool: "0xABCD...",
+  balanceManager: "0x5678...",
+  side: "BID",  // or "ASK"
+  price: 0.95,
+  quantity: 10,
+  payWithDeep: true
+})
+```
+
+**Transaction:**
+- Debits balance manager
+- Creates order object
+- Emits event
+- Returns order ID
+
+### 2. Order in Book
+
+Order sits in orderbook:
+
+```
+SUI/DBUSDC Orderbook
+
+BIDS (buy orders):
+0.95 | 10 SUI  ← Your order
+0.94 | 5 SUI
+0.93 | 20 SUI
+
+ASKS (sell orders):
+1.01 | 8 SUI
+1.02 | 15 SUI
+1.05 | 10 SUI
+```
+
+### 3. Order Matching
+
+When a counterparty's order crosses yours:
+
+```
+Incoming Market Sell: 10 SUI
+
+Matches your BID @ 0.95
+- You receive: 10 SUI
+- You pay: 9.5 DBUSDC
+- Fee: 0.019 DBUSDC (0.2% with DEEP discount)
+```
+
+**Matching Engine:**
+- Price-time priority
+- Best price matched first
+- Orders at same price: first-come-first-served
+- Sub-millisecond execution
+
+### 4. Order Completion
+
+```
+Order Status: FILLED
+Filled Quantity: 10 SUI
+Average Price: 0.95 DBUSDC
+Total Cost: 9.5 + 0.019 = 9.519 DBUSDC
+```
+
+**Balance Manager Updated:**
+```
+Before:
+SUI: 0
+DBUSDC: 100
+
+After:
+SUI: 10
+DBUSDC: 90.481
+```
+
+## Fee Structure
+
+DeepBook charges fees on trade execution:
+
+### With DEEP Tokens (Recommended)
+
+```
+Fee Rate: 0.02% (2 basis points)
+
+Example:
+Order: 10 SUI @ 0.95 DBUSDC
+Value: 9.5 DBUSDC
+Fee: 9.5 × 0.0002 = 0.0019 DBUSDC worth of DEEP
+
+Actual DEEP deducted: ~0.02 DEEP (based on DEEP/DBUSDC rate)
+```
+
+**Benefits:**
+- ✅ Lower fees (0.02% vs 0.03%)
+- ✅ Supports DeepBook ecosystem
+- ✅ DEEP has utility value
+
+### With Base/Quote Tokens
+
+```
+Fee Rate: 0.03% (3 basis points)
+
+Example:
+Order: 10 SUI @ 0.95 DBUSDC
+Value: 9.5 DBUSDC
+Fee: 9.5 × 0.0003 = 0.00285 DBUSDC
+
+Deducted directly from quote token
+```
+
+**Drawbacks:**
+- ❌ 50% higher fees
+- ❌ No ecosystem support
+
+<Tip>
+  **DeepMirror always uses DEEP tokens** (`payWithDeep: true`) for lower fees. Ensure you have DEEP balance!
+</Tip>
+
+## Pool States
+
+### Active Pool
+
+```
+Status: ACTIVE
+Trading: ✅ Enabled
+Orders: Can place, cancel, fill
+Withdrawals: ✅ Allowed
+```
+
+### Paused Pool
+
+```
+Status: PAUSED
+Trading: ❌ Disabled
+Orders: Cannot place new, existing remain
+Withdrawals: ✅ Allowed
+```
+
+**Reasons for pausing:**
+- Maintenance
+- Security issue
+- Migration to V4
+
+## Advanced Concepts
+
+### Ticks and Lots
+
+**Tick Size** - Minimum price increment:
+```
+Tick Size: 0.01 DBUSDC
+Valid Prices: 0.95, 0.96, 0.97...
+Invalid: 0.955 (not multiple of tick)
+```
+
+**Lot Size** - Minimum quantity increment:
+```
+Lot Size: 0.1 SUI
+Valid Quantities: 0.1, 0.2, 1.5, 10.0...
+Invalid: 0.15 (not multiple of lot)
+```
+
+<Warning>
+  Orders with invalid tick/lot sizes will be **rejected** by DeepBook.
+</Warning>
+
+### Self-Matching Prevention
+
+DeepBook prevents you from matching your own orders:
+
+```
+Your existing order: BID @ 0.95 for 10 SUI
+
+You try to place: ASK @ 0.95 for 5 SUI
+Result: ❌ REJECTED (self-match)
+```
+
+**Purpose:**
+- Prevent wash trading
+- Avoid unnecessary fees
+- Maintain market integrity
+
+### Order Nonce
+
+Each user has a **nonce** (order counter):
+
+```
+User: 0x1a2b...
+Current Nonce: 42
+
+Next order: Nonce 43
+Next order: Nonce 44
+...
+```
+
+**Used for:**
+- Order ID generation
+- Preventing replays
+- Tracking order history
+
+## DeepMirror's DeepBook Integration
+
+### Position Creation
+
+When maker trades, DeepMirror:
+
+1. **Detects** maker's DeepBook transaction
+2. **Extracts** pool address, side, price, quantity
+3. **Calculates** your position size (ratio × maker's size)
+4. **Checks** your balance manager has sufficient funds
+5. **Places** your limit order via `place_limit_order`
+6. **Stores** position metadata in database
+7. **Notifies** you via Telegram
+
+### Transaction Structure
+
+DeepMirror builds Sui transactions like:
+
+```typescript
+const tx = new Transaction();
+
+// Use your capability to access balance manager
+tx.add(
+  deepbook.placeOrder({
+    pool: maker.poolAddress,
+    balanceManager: yourBalanceManager,
+    capability: yourCapability,
+    side: maker.side,
+    price: maker.price,
+    quantity: yourQuantity,
+    payWithDeep: true,  // Always use DEEP
+    expiration: 0       // No expiration
+  })
+);
+
+// Sign with your zkLogin ephemeral key
+const result = await sui.signAndExecuteTransaction({
+  transaction: tx,
+  signer: zkLoginSigner
+});
+```
+
+### Monitoring Positions
+
+DeepMirror polls DeepBook to sync order counts:
+
+```typescript
+// Every 30 seconds
+const orders = await deepbook.getOrders({
+  pool: position.poolAddress,
+  owner: yourAddress
+});
+
+position.orderCount = orders.length;
+// Update database
+```
+
+## Testnet vs. Mainnet
+
+### Testnet (Current)
+
+```
+Network: Sui Testnet
+DeepBook Version: V3
+Tokens: Testnet SUI, DBUSDC, DEEP
+Faucets: Available
+Reset: Periodic (state wiped)
+```
+
+**Use for:**
+- Testing strategies
+- Learning copy trading
+- Bot development
+
+### Mainnet (Future)
+
+```
+Network: Sui Mainnet
+DeepBook Version: V3
+Tokens: Real SUI, USDC, DEEP
+Value: Real money
+Audits: Production-grade
+```
+
+**Requirements before mainnet:**
+- Security audit
+- Extensive testing
+- User documentation
+- Failsafe mechanisms
+
+<Warning>
+  **Never use mainnet until officially announced.** DeepMirror is currently testnet-only.
+</Warning>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="DeepBook Docs" icon="book" href="https://docs.deepbook.tech">
+    Official DeepBook documentation
+  </Card>
+
+  <Card title="Sui Explorer" icon="magnifying-glass" href="https://testnet.suivision.xyz">
+    View pools and transactions
+  </Card>
+
+  <Card title="DeepBook Testnet" icon="flask" href="https://testnet.deepbook.tech">
+    Test DeepBook trading interface
+  </Card>
+
+  <Card title="Move Reference" icon="code" href="https://github.com/MystenLabs/deepbookv3">
+    DeepBook V3 smart contracts
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Fee Structure" icon="coins" href="/advanced/fees">
+    Gas and trading fee details
+  </Card>
+
+  <Card title="Security Guide" icon="shield" href="/advanced/security">
+    Protect your positions
+  </Card>
+
+  <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
+    Start copy trading
+  </Card>
+</CardGroup>

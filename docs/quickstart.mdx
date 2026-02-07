@@ -1,0 +1,184 @@
+---
+title: "Quickstart"
+description: "Start copy trading in under 60 seconds"
+---
+
+# Quickstart Guide
+
+Get your DeepMirror bot up and running in three simple steps.
+
+## Step 1: Launch the Bot
+
+Open the DeepMirror bot in Telegram:
+
+<Card title="Launch DeepMirror Bot" icon="telegram" href="https://t.me/deepmirror_bot">
+  Open @deepmirror_bot in Telegram
+</Card>
+
+Tap `/start` to initialize your account.
+
+## Step 2: Authenticate with zkLogin
+
+DeepMirror uses Sui's zkLogin for secure, passwordless authentication:
+
+1. Tap **🔐 Wallet** from the main menu
+2. Select **Sign in with Google**
+3. Complete the OAuth flow in your browser
+4. Return to Telegram - your wallet is ready!
+
+<Note>
+  zkLogin creates a Sui wallet tied to your Google account. No seed phrases to remember!
+</Note>
+
+Your wallet address will be displayed in the chat. Save it for depositing funds.
+
+## Step 3: Fund Your Wallet
+
+Send testnet tokens to your wallet address:
+
+- **SUI** - For gas fees (minimum 0.5 SUI recommended)
+- **DEEP** - For DeepBook trading fees (minimum 10 DEEP)
+
+### Get Testnet Tokens
+
+<CardGroup cols={2}>
+  <Card title="SUI Faucet" icon="faucet" href="https://discord.com/channels/916379725201563759/971488439931392130">
+    Request testnet SUI in Discord
+  </Card>
+
+  <Card title="DEEP Tokens" icon="coins" href="https://testnet.deepbook.tech">
+    Get DEEP from DeepBook testnet
+  </Card>
+</CardGroup>
+
+## Step 4: Add a Maker to Copy
+
+Now you're ready to set up copy trading!
+
+### Find a Maker Wallet
+
+Choose a wallet address you want to copy. You can:
+- Use a known profitable trader's address
+- Find makers on DeepBook V3 analytics
+- Test with your own maker wallet
+
+### Configure Copy Trading
+
+1. Tap **📊 Copy Trading** from the main menu
+2. Select **Add Maker**
+3. Enter the maker's wallet address
+4. Choose your position sizing strategy:
+   - **Fixed ratio** - Copy at a specific percentage (e.g., 10%)
+   - **Fixed amount** - Use same SUI amount every time
+   - **Match maker** - Copy their exact position size
+
+5. Tap **Activate** to start monitoring
+
+<Tip>
+  Start with a **10% ratio** for your first position to limit risk while you learn.
+</Tip>
+
+## Step 5: Monitor Your Positions
+
+Once active, the bot monitors your maker 24/7:
+
+1. When the maker places an order on DeepBook V3, you receive a notification
+2. Your copy position is automatically created at your configured ratio
+3. You get a confirmation message with position details
+
+View all positions anytime with `/positions` command.
+
+## What Happens Next?
+
+Your bot is now actively monitoring! Here's what to expect:
+
+### When Maker Places an Order
+
+1. **Detection** - Bot detects maker's new position within milliseconds
+2. **Calculation** - Computes your position size based on your ratio
+3. **Execution** - Places your order on DeepBook V3
+4. **Notification** - Sends you a Telegram message with details
+5. **Tracking** - Monitors position status and order count
+
+### Position Lifecycle
+
+Your copy positions will:
+- **Monitor** - Track maker's active orders
+- **Execute** - Place orders when maker does
+- **Update** - Sync order counts in real-time
+- **Notify** - Alert you of any changes
+
+## Example Workflow
+
+Here's a complete example:
+
+```
+1. Maker opens position: SUI/DBUSDC pool
+2. You receive notification: "🎯 New maker position detected!"
+3. Your ratio: 10%
+4. Maker's position: 100 SUI
+5. Your position: 10 SUI (automatically calculated)
+6. Bot places order on DeepBook V3
+7. You receive confirmation with transaction hash
+```
+
+## Quick Commands Reference
+
+| Command | What It Does |
+|---------|--------------|
+| `/start` | Main menu |
+| `/wallet` | View wallet and balance |
+| `/copy` | Manage copy trading settings |
+| `/positions` | View all active positions |
+| `/help` | Get help and support |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Wallet not created after zkLogin">
+    Make sure you completed the OAuth flow in your browser. If stuck, tap **Sign in with Google** again.
+  </Accordion>
+
+  <Accordion title="Position not copying">
+    Check:
+    - Do you have enough SUI for gas?
+    - Do you have DEEP tokens for trading fees?
+    - Is your copy trading activated? (check with `/copy`)
+  </Accordion>
+
+  <Accordion title="zkLogin session expired">
+    Sessions expire after 7 days. Simply sign in with Google again - your wallet remains the same!
+  </Accordion>
+
+  <Accordion title="Transaction failed">
+    Most common causes:
+    - Insufficient SUI for gas fees
+    - Insufficient DEEP for trading fees
+    - Pool doesn't exist or is inactive
+    - Check transaction hash on Sui Explorer for details
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Wallet Management" icon="wallet" href="/bot/wallet">
+    Learn about zkLogin and balances
+  </Card>
+
+  <Card title="Copy Trading Deep Dive" icon="magnifying-glass" href="/bot/copy-trading">
+    Master position sizing strategies
+  </Card>
+
+  <Card title="Position Tracking" icon="chart-line" href="/bot/positions">
+    Understand position monitoring
+  </Card>
+
+  <Card title="DeepBook V3 Guide" icon="book" href="/advanced/deepbook-v3">
+    Learn the underlying protocol
+  </Card>
+</CardGroup>
+
+<Note>
+  DeepMirror is in active development. Join our [Telegram community](https://t.me/deepmirror_community) for updates and support!
+</Note>

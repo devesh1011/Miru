@@ -1,0 +1,499 @@
+---
+title: "Copy Trading"
+description: "Mirror successful traders with flexible position sizing strategies"
+---
+
+# Copy Trading Guide
+
+DeepMirror's copy trading system monitors maker wallets 24/7 and automatically replicates their DeepBook V3 positions in real-time.
+
+## How Copy Trading Works
+
+When you add a maker wallet, DeepMirror:
+
+1. **Monitors** their transactions on Sui blockchain
+2. **Detects** when they place orders on DeepBook V3
+3. **Calculates** your position size based on your ratio
+4. **Executes** your copy trade within milliseconds
+5. **Notifies** you via Telegram with position details
+6. **Tracks** the position lifecycle and order status
+
+<Info>
+  All copy trades execute **on-chain** through DeepBook V3. No centralized intermediaries, full transparency.
+</Info>
+
+## Access Copy Trading
+
+From the main menu, tap **📊 Copy Trading** or use `/copy` command.
+
+## Add a Maker Wallet
+
+### Step 1: Find a Maker
+
+You need the Sui address of the trader you want to copy. You can:
+- Track profitable wallets from DeepBook analytics
+- Follow community-recommended traders
+- Use your own test wallet for learning
+
+<Warning>
+  Only copy traders you trust! DeepMirror executes trades automatically. Do your own research.
+</Warning>
+
+### Step 2: Add the Maker
+
+1. Tap **📊 Copy Trading**
+2. Select **➕ Add Maker**
+3. Enter the maker's Sui wallet address:
+   ```
+   0x1a2b3c4d5e6f7890...
+   ```
+4. Confirm the address
+
+The maker is now added but **inactive** by default.
+
+### Step 3: Configure Position Sizing
+
+Before activating, configure how you'll size your positions:
+
+1. Select your newly added maker
+2. Tap **⚙️ Configure**
+3. Choose a sizing strategy:
+
+#### Strategy 1: Fixed Ratio (Recommended)
+
+Copy at a fixed percentage of the maker's position size.
+
+**Example:**
+- Maker opens: 100 SUI position
+- Your ratio: 10%
+- Your position: 10 SUI
+
+Best for: Consistent risk management, easy to understand.
+
+```
+Ratio options: 5%, 10%, 25%, 50%, 100%
+Custom: Enter any percentage (1-100%)
+```
+
+#### Strategy 2: Fixed Amount
+
+Use the same SUI amount regardless of maker's position size.
+
+**Example:**
+- Maker opens: 50 SUI position → You open: 5 SUI
+- Maker opens: 200 SUI position → You open: 5 SUI (same)
+
+Best for: Capital preservation, limiting exposure.
+
+```
+Amount range: 0.1 - 1000 SUI
+```
+
+#### Strategy 3: Match Maker
+
+Copy the maker's exact position size.
+
+**Example:**
+- Maker opens: 75 SUI → You open: 75 SUI
+
+Best for: High-conviction copying, when you have similar capital.
+
+<Warning>
+  **Match Maker** can use significant capital if the maker opens large positions. Use with caution!
+</Warning>
+
+### Step 4: Activate Copying
+
+1. Review your configuration:
+   - Maker address
+   - Position sizing strategy
+   - Current balances (SUI + DEEP)
+
+2. Tap **✅ Activate**
+3. Confirm the activation
+
+The maker is now **actively monitored**. You'll receive notifications when they trade.
+
+## Position Sizing Examples
+
+### Example 1: Conservative (10% Ratio)
+
+```
+Maker Position A: 50 SUI  → You: 5 SUI
+Maker Position B: 100 SUI → You: 10 SUI
+Maker Position C: 20 SUI  → You: 2 SUI
+
+Total maker: 170 SUI
+Total you: 17 SUI (10% of maker's total)
+```
+
+### Example 2: Fixed Amount (5 SUI)
+
+```
+Maker Position A: 30 SUI  → You: 5 SUI
+Maker Position B: 150 SUI → You: 5 SUI
+Maker Position C: 80 SUI  → You: 5 SUI
+
+Total maker: 260 SUI
+Total you: 15 SUI (fixed exposure)
+```
+
+### Example 3: Aggressive (50% Ratio)
+
+```
+Maker Position A: 40 SUI → You: 20 SUI
+Maker Position B: 60 SUI → You: 30 SUI
+Maker Position C: 100 SUI → You: 50 SUI
+
+Total maker: 200 SUI
+Total you: 100 SUI (50% of maker's total)
+```
+
+## Manage Multiple Makers
+
+You can copy up to **10 makers simultaneously**. Each maker has independent settings.
+
+### View All Makers
+
+The **Copy Trading** menu shows:
+- Maker address (truncated)
+- Status (Active ✅ / Inactive ❌)
+- Current configuration
+- Number of active positions
+
+### Edit Maker Settings
+
+1. Select a maker from the list
+2. Tap **⚙️ Configure**
+3. Change ratio or strategy
+4. Save changes
+
+<Note>
+  Configuration changes only affect **new positions**. Existing positions remain unchanged.
+</Note>
+
+### Pause Copying
+
+To temporarily stop copying a maker:
+
+1. Select the maker
+2. Tap **⏸️ Pause**
+3. Confirm
+
+Paused makers:
+- Stop creating new positions
+- Keep existing positions active
+- Can be resumed anytime
+
+### Remove a Maker
+
+To permanently delete a maker:
+
+1. Select the maker
+2. Tap **🗑️ Remove Maker**
+3. Confirm deletion
+
+<Warning>
+  Removing a maker does **not** close existing positions. Manage those separately via `/positions`.
+</Warning>
+
+## Capabilities and Permissions
+
+For the bot to execute copy trades, you need to grant it a **Capability object**.
+
+### What is a Capability?
+
+Capabilities are on-chain permission objects that allow the bot to:
+- Access your balance manager
+- Place orders on your behalf
+- Interact with DeepBook V3
+
+**You retain full control:**
+- Capabilities are revocable
+- Limited to specific actions
+- Don't give access to withdraw funds
+
+### Grant Capability
+
+The first time you activate a maker, you'll be prompted:
+
+1. Review the capability details:
+   ```
+   Granting access to:
+   - Place orders on DeepBook V3
+   - Use your balance manager
+   - Execute copy trades
+   
+   NOT granted:
+   - Withdraw tokens
+   - Transfer assets
+   - Access other protocols
+   ```
+
+2. Tap **Approve Transaction**
+3. A transaction link appears
+4. Open in browser and approve via zkLogin
+5. Capability is created!
+
+<Tip>
+  You only grant capability **once**. It works for all future copy trades.
+</Tip>
+
+### Revoke Capability
+
+To remove bot's permissions:
+
+1. Go to **🔐 Wallet**
+2. Tap **🔒 Manage Capabilities**
+3. Select capability to revoke
+4. Confirm revocation
+5. Approve transaction
+
+After revoking, the bot can no longer place trades until you grant a new capability.
+
+## Notifications
+
+DeepMirror sends Telegram notifications for key events:
+
+### Position Created
+
+```
+🎯 New Copy Position
+
+Maker: 0x1a2b...
+Pool: SUI/DBUSDC
+Your Size: 10 SUI (10% ratio)
+Status: Active
+
+Transaction: https://testnet.suivision.xyz/...
+```
+
+### Order Executed
+
+```
+✅ Order Placed
+
+Position: SUI/DBUSDC #123
+Side: BID
+Price: 0.95 DBUSDC
+Quantity: 10 SUI
+
+View: /positions
+```
+
+### Error Occurred
+
+```
+❌ Copy Trade Failed
+
+Maker: 0x1a2b...
+Reason: Insufficient DEEP balance
+
+Action needed: Refill DEEP tokens
+```
+
+### Low Balance Warning
+
+```
+⚠️ Low Balance Alert
+
+SUI: 0.08 (below 0.1)
+DEEP: 3.2 (below 5)
+
+Refill to continue copy trading
+```
+
+## Copy Trading Lifecycle
+
+Here's what happens from start to finish:
+
+### 1. Maker Places Order
+
+Maker wallet submits a transaction to DeepBook V3:
+- Creates a new position
+- Places limit orders
+- Sets price and quantity
+
+### 2. Bot Detects Transaction
+
+DeepMirror monitors blockchain events:
+- Detects maker's transaction within 500ms
+- Extracts position details (pool, side, price)
+- Validates it's a DeepBook V3 trade
+
+### 3. Position Creation
+
+Bot creates your copy position:
+- Calculates size based on your ratio
+- Checks your balances (SUI + DEEP)
+- Creates position record in database
+- Sends you a notification
+
+### 4. Order Execution
+
+Your order is placed on DeepBook V3:
+- Uses your capability object
+- Matches maker's pool and side
+- Adjusts quantity per your ratio
+- Pays fees with DEEP tokens
+
+### 5. Position Monitoring
+
+DeepMirror tracks both positions:
+- Syncs order counts
+- Monitors maker's updates
+- Alerts you of changes
+- Provides `/positions` view
+
+### 6. Position Lifecycle
+
+Positions remain active until:
+- You manually close via `/positions`
+- Maker closes their position
+- You deactivate the maker
+- Balance insufficient for new orders
+
+## Advanced Configuration
+
+### Smart Filters (Coming Soon)
+
+Filter which positions to copy based on:
+- Minimum/maximum position size
+- Specific trading pairs only
+- Time-based rules (e.g., only during Asian hours)
+- Risk limits (max positions per day)
+
+### Auto-Close Settings (Coming Soon)
+
+Automatically close positions when:
+- Maker closes their position
+- Target profit/loss reached
+- Time limit exceeded
+- Certain market conditions met
+
+### Position Limits (Coming Soon)
+
+Set boundaries to protect capital:
+- Max positions per maker
+- Max total exposure across all makers
+- Daily loss limits
+- Reserve balance (never trade below X SUI)
+
+## Best Practices
+
+### DO ✅
+
+- **Start small** - Use 5-10% ratio while learning
+- **Monitor balances** - Keep sufficient SUI and DEEP
+- **Research makers** - Only copy trusted, proven traders
+- **Set limits** - Don't over-leverage even on good makers
+- **Check positions daily** - Via `/positions` command
+- **Diversify** - Copy multiple makers to spread risk
+
+### DON'T ❌
+
+- **Blindly copy** - Always understand the maker's strategy
+- **Max leverage immediately** - Don't start with 100% ratio
+- **Ignore notifications** - Stay informed of all trades
+- **Copy too many makers** - Quality over quantity
+- **Forget to refill** - Low balances = missed opportunities
+- **Panic close** - Let your strategy play out
+
+## Risk Management
+
+<AccordionGroup>
+  <Accordion title="How much capital should I allocate?">
+    **Conservative:** 5-10% of total capital per maker
+    **Moderate:** 10-25% per maker
+    **Aggressive:** 25-50% per maker
+    
+    Never allocate more than you can afford to lose. Start conservative.
+  </Accordion>
+
+  <Accordion title="How many makers should I copy?">
+    **Beginners:** 1-2 makers to learn mechanics
+    **Intermediate:** 3-5 makers to diversify
+    **Advanced:** 5-10 makers with different strategies
+    
+    More isn't always better. Focus on quality.
+  </Accordion>
+
+  <Accordion title="What if maker makes bad trades?">
+    Your positions are **independent**. If maker's strategy fails:
+    1. Pause the maker immediately
+    2. Close your positions via `/positions`
+    3. Remove the maker
+    4. Capital loss is limited to positions already opened
+  </Accordion>
+
+  <Accordion title="Can I lose more than my position size?">
+    **No.** On DeepBook:
+    - Positions are fully collateralized
+    - No margin trading or leverage (beyond 1x)
+    - Maximum loss = position size
+    - No liquidations or negative balance
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Maker traded but I didn't copy">
+    **Possible causes:**
+    1. Maker is paused/inactive (check status)
+    2. Insufficient SUI for gas
+    3. Insufficient DEEP for fees
+    4. Capability revoked (re-grant)
+    5. Bot detecting wrong transaction type
+    
+    **Solution:** Check balances, verify maker is active, review notifications for error message.
+  </Accordion>
+
+  <Accordion title="Position size incorrect">
+    **Causes:**
+    - Configuration updated after position created
+    - Rounding errors on small amounts
+    - Balance too low to match exact ratio
+    
+    **Solution:** Verify configuration in maker settings. Newest config applies to future positions only.
+  </Accordion>
+
+  <Accordion title="Can't activate maker">
+    **Requirements:**
+    - zkLogin active (not expired)
+    - Capability granted
+    - Minimum balance (0.5 SUI + 10 DEEP)
+    
+    **Solution:** Check wallet screen, refresh zkLogin, grant capability.
+  </Accordion>
+
+  <Accordion title="Too many positions created">
+    **Cause:** Maker is very active trader
+    
+    **Solutions:**
+    1. Use smaller ratio (5% instead of 25%)
+    2. Pause maker temporarily
+    3. Set filters (when available)
+    4. Close oldest positions manually
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Monitor Positions" icon="chart-line" href="/bot/positions">
+    Track and manage your copy trades
+  </Card>
+
+  <Card title="Bot Commands" icon="terminal" href="/bot/commands">
+    Complete command reference
+  </Card>
+
+  <Card title="DeepBook V3" icon="book" href="/advanced/deepbook-v3">
+    Understand the trading protocol
+  </Card>
+
+  <Card title="Fee Structure" icon="coins" href="/advanced/fees">
+    Gas and trading fee breakdown
+  </Card>
+</CardGroup>

@@ -1,0 +1,478 @@
+---
+title: "Position Management"
+description: "Track and manage your active copy trading positions"
+---
+
+# Position Management
+
+Monitor all your copy trading positions in real-time, view order details, and manage position lifecycles.
+
+## Access Positions
+
+From the main menu, tap **📈 Positions** or use `/positions` command.
+
+## Position Overview
+
+The positions screen displays all your active copy trades:
+
+```
+📈 Your Active Positions (2)
+
+1️⃣ SUI/DBUSDC
+   Maker: 0x1a2b...
+   Size: 10 SUI (10% ratio)
+   Orders: 3
+   Status: Active ✅
+   Created: 2 hours ago
+
+2️⃣ DEEP/SUI
+   Maker: 0x7f8e...
+   Size: 25 SUI (25% ratio)
+   Orders: 1
+   Status: Monitoring 🔍
+   Created: 30 minutes ago
+```
+
+### Position States
+
+| Status | Meaning |
+|--------|---------|
+| **Active** ✅ | Position has orders on DeepBook V3 |
+| **Monitoring** 🔍 | Waiting for maker to place orders |
+| **Error** ❌ | Issue occurred (check details) |
+| **Inactive** ⏸️ | Temporarily paused |
+
+## Position Details
+
+Tap any position to view detailed information:
+
+### Basic Info
+
+- **Pool** - Trading pair (e.g., SUI/DBUSDC)
+- **Maker Address** - Who you're copying
+- **Your Position Size** - Total SUI allocated
+- **Copy Ratio** - Your sizing strategy (e.g., 10%)
+- **Creation Time** - When position started
+- **Order Count** - Number of active orders
+
+### DeepBook Details
+
+- **Pool Address** - On-chain pool identifier
+- **Balance Manager** - Your balance manager object
+- **Capability** - Permission object used
+- **Pool State** - Open/Closed status
+
+### Order Information
+
+For each order in the position:
+- **Side** - BID (buy) or ASK (sell)
+- **Price** - Limit price
+- **Quantity** - Order size
+- **Status** - Open/Filled/Canceled
+- **Transaction Hash** - On-chain proof
+
+<Info>
+  Order details are fetched from DeepBook V3 in real-time. May take a few seconds to load.
+</Info>
+
+## Understanding Position Lifecycle
+
+### 1. Creation Phase
+
+When maker opens a position:
+- Bot detects transaction
+- Creates position record
+- Status: **Monitoring** 🔍
+- Order count: 0
+
+### 2. Order Placement
+
+When maker places their first order:
+- Bot places your corresponding order
+- Status changes to: **Active** ✅
+- Order count increments
+- You receive notification
+
+### 3. Active Monitoring
+
+While position is active:
+- Bot tracks maker's orders
+- Syncs your order count
+- Updates status in real-time
+- Notifies of any changes
+
+### 4. Order Updates
+
+When maker adds more orders:
+- Your order count increases
+- New orders placed automatically
+- Position remains active
+- Total exposure increases
+
+### 5. Position Closure
+
+Positions can close when:
+- You manually close via bot
+- Maker closes their position
+- Maker becomes inactive
+- You remove the maker
+
+## Managing Positions
+
+### View Position Details
+
+1. Go to `/positions`
+2. Tap on a position number
+3. View full details screen
+4. Access quick actions
+
+### Close a Position
+
+To manually close and stop copying:
+
+1. Select the position
+2. Tap **🛑 Close Position**
+3. Confirm closure
+4. Orders are canceled on DeepBook V3
+5. Position marked as closed
+
+<Warning>
+  Closing a position cancels all open orders but doesn't refund gas or fees already spent.
+</Warning>
+
+### View on Explorer
+
+To see on-chain data:
+
+1. Select a position
+2. Tap **🔍 View on Explorer**
+3. Opens Sui Explorer in browser
+4. View all transactions and orders
+
+### Refresh Position
+
+To update order count manually:
+
+1. Select a position
+2. Tap **↻ Refresh**
+3. Wait for on-chain query
+4. Updated data displayed
+
+## Position Filters
+
+Filter positions by status:
+
+<Tabs>
+  <Tab title="All Positions">
+    Shows every position regardless of status.
+  </Tab>
+
+  <Tab title="Active Only">
+    Shows positions with orders on DeepBook V3.
+  </Tab>
+
+  <Tab title="Monitoring">
+    Shows positions waiting for maker's first order.
+  </Tab>
+
+  <Tab title="Inactive">
+    Shows paused or error positions.
+  </Tab>
+</Tabs>
+
+## Position Analytics
+
+### Orders Per Position
+
+Track how many orders each position has generated:
+
+```
+Position: SUI/DBUSDC
+Total Orders: 12
+- 8 BID orders
+- 4 ASK orders
+Average per day: 4 orders
+```
+
+This helps you understand:
+- Maker's trading frequency
+- Your capital deployment rate
+- Fee accumulation
+
+### Position Size Tracking
+
+Monitor total capital allocated:
+
+```
+Total Across All Positions: 67 SUI
+
+By Maker:
+- Maker A: 35 SUI (52%)
+- Maker B: 20 SUI (30%)
+- Maker C: 12 SUI (18%)
+```
+
+### Time-Based Stats
+
+View position age and activity:
+- **Oldest position** - 7 days active
+- **Newest position** - 2 hours active
+- **Most active** - 45 orders in 3 days
+- **Least active** - 0 orders (monitoring)
+
+## Position Limits
+
+### Maximum Active Positions
+
+- **Per maker:** Unlimited
+- **Per user:** 50 positions
+- **Recommended:** 5-10 active positions
+
+<Tip>
+  More positions = more complexity. Focus on quality over quantity!
+</Tip>
+
+### Why Limit Positions?
+
+Managing too many positions can lead to:
+- Difficulty tracking performance
+- High gas fee accumulation
+- Capital spread too thin
+- Notification overload
+
+## Notifications
+
+DeepMirror sends updates for position events:
+
+### New Position
+
+```
+🎯 Position Created
+
+Maker: 0x1a2b... (AlphaTrader)
+Pool: SUI/DBUSDC
+Size: 10 SUI (10% ratio)
+
+Status: Monitoring
+View: /positions
+```
+
+### First Order
+
+```
+✅ First Order Placed
+
+Position: SUI/DBUSDC #42
+Side: BID
+Price: 0.95
+Quantity: 10 SUI
+
+Status: Active ✅
+```
+
+### Order Count Update
+
+```
+📊 Position Update
+
+Position: DEEP/SUI #38
+Orders: 5 → 7 (+2 new)
+
+View details: /positions
+```
+
+### Position Error
+
+```
+❌ Position Error
+
+Position: SUI/DBUSDC #42
+Error: Insufficient DEEP balance
+
+Action: Refill tokens to continue
+```
+
+## Advanced Actions
+
+### Batch Close Positions
+
+Close multiple positions at once:
+
+1. Go to **📈 Positions**
+2. Tap **⚙️ Manage All**
+3. Select positions to close
+4. Tap **🛑 Close Selected**
+5. Confirm bulk action
+
+### Export Position Data
+
+Get CSV export of all positions:
+
+1. Go to **📈 Positions**
+2. Tap **📥 Export**
+3. Receive file with:
+   - Position IDs
+   - Maker addresses
+   - Pool names
+   - Sizes and ratios
+   - Order counts
+   - Creation dates
+
+### Position History
+
+View closed positions:
+
+1. Go to **📈 Positions**
+2. Tap **📜 History**
+3. See all past positions
+4. Filter by date/maker/pool
+
+## Position Safety
+
+### What Happens If...
+
+<AccordionGroup>
+  <Accordion title="Bot goes offline?">
+    - Existing positions remain on DeepBook V3
+    - Orders stay active on-chain
+    - You retain full control via blockchain
+    - When bot returns, syncs position state
+    - No data is lost
+  </Accordion>
+
+  <Accordion title="I run out of SUI?">
+    - New orders cannot be placed
+    - Existing orders remain active
+    - Position marked with error status
+    - You receive low balance notification
+    - Refill SUI to resume
+  </Accordion>
+
+  <Accordion title="I run out of DEEP?">
+    - Similar to SUI depletion
+    - Cannot pay DeepBook trading fees
+    - Existing orders unaffected
+    - Get DEEP to continue copying
+  </Accordion>
+
+  <Accordion title="Maker closes their position?">
+    - Your position remains active
+    - DeepMirror doesn't auto-close (yet)
+    - You should manually close via `/positions`
+    - Future: Auto-close feature planned
+  </Accordion>
+
+  <Accordion title="I revoke capability?">
+    - Bot cannot place new orders
+    - Existing orders stay on DeepBook
+    - Positions marked with error
+    - Re-grant capability to resume
+  </Accordion>
+</AccordionGroup>
+
+## Performance Tracking
+
+### Coming Soon: Analytics Dashboard
+
+Track your copy trading performance:
+
+- **Total P&L** - Profit/loss across all positions
+- **Best performer** - Highest return position
+- **Win rate** - Percentage of profitable positions
+- **ROI per maker** - Return by trader copied
+- **Fee efficiency** - Gas + trading fees spent
+- **Time in market** - Average position duration
+
+### Benchmarking
+
+Compare your results to:
+- Maker's own performance
+- Other copiers (anonymized)
+- Market indices
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Position shows 0 orders but maker is active">
+    **Causes:**
+    - Bot just created position, maker hasn't placed order yet
+    - Maker placed order but it failed
+    - Detection lag (usually < 1 second)
+    
+    **Solution:** Wait a few seconds and refresh. If persists, check maker's address is correct.
+  </Accordion>
+
+  <Accordion title="Order count not updating">
+    **Causes:**
+    - Maker hasn't placed new orders
+    - Network delay in fetching DeepBook data
+    - Position is inactive/paused
+    
+    **Solution:** Tap refresh icon. Check maker's recent transactions on Explorer.
+  </Accordion>
+
+  <Accordion title="Can't close position">
+    **Causes:**
+    - zkLogin session expired
+    - Insufficient SUI for cancellation gas
+    - Network connectivity issue
+    
+    **Solution:** Re-authenticate zkLogin, ensure > 0.1 SUI balance, retry.
+  </Accordion>
+
+  <Accordion title="Position stuck in monitoring">
+    **Possible reasons:**
+    - Maker created position but hasn't placed orders
+    - Maker position is on different pool
+    - Bot missed initial order (rare)
+    
+    **Solution:** Verify maker's pool address matches. Check maker's transactions. Contact support if issue persists.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+### Daily Routine
+
+1. **Check positions** - Open `/positions` once per day
+2. **Review notifications** - Read all position updates
+3. **Monitor balances** - Ensure adequate SUI + DEEP
+4. **Assess performance** - Are positions profitable?
+5. **Adjust strategy** - Close underperformers, add to winners
+
+### Weekly Review
+
+1. **Position audit** - Close old/inactive positions
+2. **Maker evaluation** - Are they still performing?
+3. **Capital rebalancing** - Adjust position sizes
+4. **Fee analysis** - Are gas costs reasonable?
+5. **Strategy refinement** - What worked, what didn't?
+
+### Red Flags
+
+Close or pause positions if:
+- ❌ Maker stops trading for 3+ days
+- ❌ Multiple failed orders in a row
+- ❌ Position losing money consistently
+- ❌ Maker's strategy changed dramatically
+- ❌ Unusual order patterns
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Bot Commands" icon="terminal" href="/bot/commands">
+    Full command reference
+  </Card>
+
+  <Card title="DeepBook V3" icon="book" href="/advanced/deepbook-v3">
+    Understand the protocol
+  </Card>
+
+  <Card title="Security Guide" icon="shield" href="/advanced/security">
+    Protect your positions
+  </Card>
+
+  <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
+    Fix common issues
+  </Card>
+</CardGroup>

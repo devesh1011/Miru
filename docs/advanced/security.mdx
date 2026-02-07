@@ -1,0 +1,658 @@
+---
+title: "Security Guide"
+description: "Best practices for protecting your wallet and positions"
+---
+
+# Security Guide
+
+Comprehensive security practices for safe copy trading on DeepMirror.
+
+## Threat Model
+
+Understanding potential risks:
+
+| Threat | Impact | Likelihood | Mitigation |
+|--------|--------|------------|------------|
+| **Google account compromise** | Complete wallet access | Low | Enable 2FA, strong password |
+| **zkLogin session leak** | Temporary signing access | Medium | Secure redirect URLs, expire sessions |
+| **Capability abuse** | Bot places unauthorized orders | Low | Monitor positions, revoke capabilities |
+| **Malicious maker** | Copy bad trades | Medium | Research makers, diversify |
+| **Smart contract bug** | DeepBook exploit | Very Low | Testnet only, audits |
+| **Phishing** | Reveal sensitive data | Medium | Verify sources, no DMs |
+
+<Warning>
+  DeepMirror is **testnet-only**. Never use real funds until official mainnet launch!
+</Warning>
+
+## Wallet Security
+
+### Google Account Protection
+
+Your Google account **is** your wallet. Secure it:
+
+#### Enable Two-Factor Authentication (2FA)
+
+1. Go to [Google Account Security](https://myaccount.google.com/security)
+2. Enable **2-Step Verification**
+3. Use authenticator app (Google Authenticator, Authy)
+4. Add backup codes
+5. Enable **Advanced Protection Program** (optional, high security)
+
+<Tip>
+  **SMS 2FA is better than nothing**, but authenticator apps are more secure.
+</Tip>
+
+#### Strong Password
+
+```
+❌ Bad: password123
+❌ Bad: YourName2024
+✅ Good: T7$mK9#pL3^xR2@vN5
+```
+
+**Requirements:**
+- 16+ characters
+- Mix of upper/lower/numbers/symbols
+- No dictionary words
+- No personal info
+- Unique (never reused)
+
+Use a **password manager**:
+- 1Password
+- Bitwarden
+- LastPass
+
+#### Dedicated Google Account
+
+Create a **separate Google account** for blockchain:
+
+```
+Personal: john.doe@gmail.com (daily use)
+Blockchain: johndoe.web3@gmail.com (DeepMirror only)
+```
+
+**Benefits:**
+- ✅ Isolates crypto activity
+- ✅ Limits damage if compromised
+- ✅ Better privacy
+
+### zkLogin Session Safety
+
+#### Protect Redirect URLs
+
+After OAuth, Google redirects with sensitive data:
+
+```
+https://authflow.sui.io/#id_token=eyJhbGc...
+                                  ↑ Your JWT token
+```
+
+**DO:**
+- ✅ Copy URL from browser address bar
+- ✅ Paste directly in DeepMirror bot
+- ✅ Use external browser (not in-app)
+- ✅ Delete the message after successful login
+
+**DON'T:**
+- ❌ Share URL with anyone
+- ❌ Post in public channels
+- ❌ Save in unencrypted notes
+- ❌ Use public/shared computers
+
+<Warning>
+  Anyone with your redirect URL can authenticate zkLogin for a short time. Treat it like a password!
+</Warning>
+
+#### Session Expiration
+
+zkLogin sessions last **7 days max**:
+
+```
+Created: Feb 1, 2026 10:00 AM
+Expires: Feb 8, 2026 10:00 AM
+
+After expiration:
+- Bot cannot sign transactions
+- Positions remain on-chain
+- Simply re-authenticate to continue
+```
+
+**Best practice:**
+- ⏰ Renew session every 6 days
+- 🔔 Enable expiration reminders in `/settings`
+- 🚫 Don't let sessions linger unused
+
+#### Manual Session Revocation
+
+If you suspect session compromise:
+
+1. Open `/wallet`
+2. Tap **🔒 Revoke Session**
+3. Confirm revocation
+4. Bot immediately loses signing access
+5. Re-authenticate when safe
+
+**When to revoke:**
+- Lost your phone
+- Shared redirect URL by mistake
+- Suspicious activity in positions
+- Switching devices
+
+### Private Key Management
+
+#### Export Wallet (Advanced)
+
+DeepMirror lets you export your ephemeral private key:
+
+1. Go to `/wallet`
+2. Tap **🔑 Export Wallet**
+3. Receive private key
+
+**Security:**
+- 🔒 Store in password manager
+- 🔒 Never share with anyone
+- 🔒 Don't save in plain text
+- 🔒 Consider hardware wallet for large amounts
+
+#### Backup Strategies
+
+**Option 1: Password Manager**
+```
+Entry: DeepMirror Wallet
+Username: 0x1a2b3c4d...
+Password: [private key]
+Notes: Testnet only, Feb 2026
+```
+
+**Option 2: Encrypted File**
+```bash
+# Create encrypted backup
+echo "private_key_here" | gpg --encrypt > wallet.gpg
+
+# Decrypt when needed
+gpg --decrypt wallet.gpg
+```
+
+**Option 3: Paper Backup**
+- Write private key on paper
+- Store in safe
+- Fireproof/waterproof bag
+- Tell trusted person where it is
+
+<Note>
+  For testnet, simple password manager storage is sufficient. Mainnet requires stronger measures.
+</Note>
+
+## Capability Security
+
+### Understanding Capabilities
+
+Capabilities grant **limited permissions**:
+
+```
+Capability Object: 0xCDEF...
+Granted to: 0x9a8b... (bot)
+
+Can:
+✅ Place orders on your behalf
+✅ Use your balance manager
+✅ Interact with DeepBook
+
+Cannot:
+❌ Withdraw tokens from balance manager
+❌ Transfer your assets
+❌ Grant further capabilities
+❌ Access non-DeepBook protocols
+```
+
+### Granting Capabilities
+
+When first activating copy trading:
+
+1. **Review permissions carefully:**
+   ```
+   Grant capability to:
+   DeepMirror Bot (0x9a8b...)
+   
+   Permissions:
+   - Place limit orders
+   - Access balance manager for trading
+   
+   Not granted:
+   - Withdraw funds
+   - Transfer assets
+   ```
+
+2. **Verify bot address** (0x9a8b...) matches [official docs](https://docs.deepmirror.xyz)
+3. **Approve transaction** via zkLogin
+4. **Capability created** and stored
+
+### Monitoring Capabilities
+
+Check active capabilities:
+
+```
+/wallet > Manage Capabilities
+
+Active Capabilities (1):
+1. DeepBook Trading
+   Granted to: 0x9a8b...
+   Created: Feb 1, 2026
+   Used by: 3 positions
+   
+   Actions:
+   🔍 View Details
+   🔒 Revoke
+```
+
+**Red flags:**
+- Multiple capabilities (should only be 1)
+- Unknown recipient address
+- Capabilities you don't remember granting
+
+### Revoking Capabilities
+
+When to revoke:
+
+- ✋ Stopping copy trading permanently
+- 🚨 Suspicious position activity
+- 🔄 Resetting bot configuration
+- 📱 Lost device or session
+
+**Process:**
+1. `/wallet` > **Manage Capabilities**
+2. Select capability
+3. **Revoke**
+4. Confirm transaction
+5. Capability destroyed
+
+**Effect:**
+- Bot immediately loses trading access
+- Existing positions remain on DeepBook
+- Must grant new capability to resume
+
+## Position Safety
+
+### Maker Due Diligence
+
+Before copying a maker:
+
+#### Research Their History
+
+1. **Check Sui Explorer:**
+   ```
+   https://testnet.suivision.xyz/account/0x1a2b...
+   
+   Review:
+   - Total transactions
+   - DeepBook activity frequency
+   - Wallet age
+   - Token holdings
+   ```
+
+2. **Analyze Trade Performance:**
+   - Profit/loss ratio
+   - Win rate
+   - Average position size
+   - Risk management
+
+3. **Community Reputation:**
+   - Twitter/Telegram mentions
+   - Leaderboards (if available)
+   - Known scammer lists
+
+#### Red Flags
+
+❌ **Avoid makers with:**
+- Brand new wallet (< 1 month old)
+- Few transactions (< 50)
+- Erratic position sizes (1 SUI then 1000 SUI)
+- No history outside DeepBook (suspicious)
+- Associated with known exploits
+
+✅ **Prefer makers with:**
+- Established history (3+ months)
+- Consistent activity
+- Transparent strategy
+- Community endorsements
+- Verifiable track record
+
+### Position Sizing Limits
+
+Never over-allocate to copy trading:
+
+```
+Total Portfolio: 100 SUI
+
+❌ Risky Allocation:
+- Copy trading: 90 SUI (90%)
+- Reserve: 10 SUI (10%)
+
+✅ Balanced Allocation:
+- Copy trading: 30 SUI (30%)
+- Manual trading: 40 SUI (40%)
+- Reserve: 30 SUI (30%)
+```
+
+**Per-Maker Limits:**
+- Conservative: 5-10% per maker
+- Moderate: 10-20% per maker
+- Aggressive: 20-30% per maker
+- Max: 50% per maker (risky!)
+
+### Diversification
+
+Don't put all capital with one maker:
+
+```
+❌ Single Maker:
+- Maker A: 30 SUI (100%)
+
+✅ Diversified:
+- Maker A: 10 SUI (33%)
+- Maker B: 10 SUI (33%)
+- Maker C: 10 SUI (33%)
+```
+
+**Benefits:**
+- Reduces impact of one bad maker
+- Different strategies = lower correlation
+- Better risk-adjusted returns
+- Learn from multiple approaches
+
+## Operational Security
+
+### Telegram Security
+
+Your Telegram account controls the bot:
+
+#### Enable Telegram 2FA
+
+1. **Settings** > **Privacy and Security**
+2. **Two-Step Verification**
+3. Set strong password
+4. Add recovery email
+5. Enable login code emails
+
+#### Session Management
+
+Check active sessions:
+
+1. **Settings** > **Devices**
+2. Review all active sessions
+3. Terminate unknown devices
+4. Enable notifications for new logins
+
+#### Privacy Settings
+
+```
+Settings > Privacy and Security
+
+Phone Number: Nobody
+Last Seen: Nobody
+Profile Photo: My Contacts
+Bio: Nobody
+Calls: My Contacts
+Groups: My Contacts
+```
+
+**Why:**
+- Reduces phishing attack surface
+- Prevents social engineering
+- Limits bot impersonation
+
+### Phishing Protection
+
+Common phishing tactics:
+
+#### Fake Bot DMs
+
+```
+Scammer: "DeepMirror Support"
+Message: "Your wallet has an issue. Send your private key to resolve."
+
+Reality: DeepMirror will NEVER DM you first!
+```
+
+**Verification:**
+- ✅ Official bot: @deepmirror_bot (check username)
+- ✅ Never asks for private keys
+- ✅ Never asks for redirect URLs
+- ✅ All help is in-bot or on docs.deepmirror.xyz
+
+#### Fake Support Channels
+
+```
+Scammer creates: "DeepMirror Official Support" (Telegram group)
+
+Reality: Only trust official links from docs!
+```
+
+**Verify:**
+- Official community: [t.me/deepmirror_community](https://t.me/deepmirror_community)
+- Check footer of docs.deepmirror.xyz
+- Admins have verified badges
+
+#### Malicious Links
+
+```
+Scammer: "Claim your airdrop: deepmirr0r.xyz"
+                                         ↑ zero instead of 'o'
+
+Legit: docs.deepmirror.xyz
+```
+
+**Always:**
+- Check domain spelling
+- Hover before clicking
+- Bookmark official sites
+- Use docs for all links
+
+### Device Security
+
+#### Phone Security
+
+- 🔒 Strong lock screen (PIN/biometric)
+- 📱 Keep OS updated
+- 🔐 Use encrypted messaging
+- 🚫 Don't root/jailbreak device
+- 💾 Enable auto-backups (encrypted)
+
+#### Computer Security
+
+- 🖥️ Keep browser updated
+- 🛡️ Use antivirus software
+- 🔥 Enable firewall
+- 🚫 Don't click suspicious links
+- 🔒 Encrypt hard drive
+
+## Monitoring & Alerts
+
+### Enable All Notifications
+
+In `/settings`, turn on:
+
+- ✅ Position Created
+- ✅ Order Placed
+- ✅ Low Balance Warning
+- ✅ Capability Changes
+- ✅ Session Expiration
+
+**Why:**
+- Detect unauthorized activity immediately
+- Stay informed of all trades
+- Prevent failures from low balances
+
+### Daily Security Checklist
+
+**Every day:**
+1. ✅ Check `/positions` for unexpected trades
+2. ✅ Verify `/wallet` balances match expectations
+3. ✅ Review Telegram notifications
+4. ✅ Confirm makers are still active in `/copy`
+
+**Weekly:**
+1. ✅ Audit all positions
+2. ✅ Review maker performance
+3. ✅ Check Google account security logs
+4. ✅ Verify zkLogin session status
+
+**Monthly:**
+1. ✅ Full security review
+2. ✅ Update passwords
+3. ✅ Revoke and re-grant capabilities (fresh start)
+4. ✅ Check for bot updates
+
+## Incident Response
+
+### If Wallet Compromised
+
+**Immediate actions:**
+
+1. **Revoke zkLogin session:**
+   ```
+   /wallet > Revoke Session
+   ```
+
+2. **Revoke all capabilities:**
+   ```
+   /wallet > Manage Capabilities > Revoke All
+   ```
+
+3. **Close all positions (if possible):**
+   ```
+   /positions > Close All
+   ```
+
+4. **Change Google password**
+
+5. **Enable Google 2FA** (if not already)
+
+6. **Contact support:**
+   - Report to Telegram: @deepmirror_support
+   - Email: security@deepmirror.xyz
+   - Include: wallet address, timestamp, details
+
+### If Suspicious Activity Detected
+
+**Example:**
+```
+Notification: "Position Created: SUI/UNKNOWN"
+You: "I didn't authorize this!"
+```
+
+**Steps:**
+
+1. **Pause immediately:**
+   - Revoke capability
+   - Don't interact with suspicious positions
+
+2. **Investigate:**
+   - Check maker address
+   - Review transaction on Explorer
+   - Verify it wasn't you (maybe you forgot?)
+
+3. **Document:**
+   - Screenshot everything
+   - Note timestamps
+   - Save transaction hashes
+
+4. **Report:**
+   - Contact support
+   - Provide documentation
+   - Follow their guidance
+
+### If Lost Access
+
+**Scenarios:**
+
+#### Lost Phone
+
+- ✅ zkLogin still works (Google account accessible from any device)
+- ✅ Sessions persist
+- ✅ Download Telegram on new device
+- ✅ Log in with same account
+
+#### Forgot Google Password
+
+- ✅ Use Google account recovery
+- ✅ Recovery email or phone
+- ✅ Once recovered, access wallet via zkLogin
+
+#### Lost zkLogin Session (Expired)
+
+- ✅ Re-authenticate via Google
+- ✅ Same wallet address restored
+- ✅ All positions intact
+
+<Info>
+  As long as you control your **Google account**, you can always access your zkLogin wallet!
+</Info>
+
+## Best Practices Summary
+
+<CardGroup cols={2}>
+  <Card title="Google Account" icon="shield-check">
+    - Enable 2FA
+    - Strong unique password
+    - Dedicated account for crypto
+    - Monitor security logs
+  </Card>
+
+  <Card title="zkLogin Sessions" icon="key">
+    - Protect redirect URLs
+    - Renew before expiration
+    - Revoke if suspicious
+    - Never share JWT tokens
+  </Card>
+
+  <Card title="Capabilities" icon="lock">
+    - Grant only to official bot
+    - Monitor usage
+    - Revoke when stopping
+    - One capability at a time
+  </Card>
+
+  <Card title="Positions" icon="chart-line">
+    - Research makers thoroughly
+    - Diversify across makers
+    - Limit per-maker allocation
+    - Monitor daily
+  </Card>
+</CardGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Sui zkLogin Security" icon="book" href="https://docs.sui.io/concepts/cryptography/zklogin#security">
+    Official zkLogin security guide
+  </Card>
+
+  <Card title="Google Account Security" icon="shield" href="https://myaccount.google.com/security">
+    Check and improve Google security
+  </Card>
+
+  <Card title="Telegram Security" icon="lock" href="https://telegram.org/privacy">
+    Telegram privacy and security
+  </Card>
+
+  <Card title="Report Security Issue" icon="bug" href="mailto:security@deepmirror.xyz">
+    Confidential security reports
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Wallet Management" icon="wallet" href="/bot/wallet">
+    Set up wallet securely
+  </Card>
+
+  <Card title="Start Copy Trading" icon="copy" href="/bot/copy-trading">
+    Begin copying makers safely
+  </Card>
+
+  <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
+    Fix common issues
+  </Card>
+</CardGroup>

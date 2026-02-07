@@ -1,0 +1,291 @@
+---
+title: "Wallet Management"
+description: "Manage your zkLogin wallet and check balances"
+---
+
+# Wallet Management
+
+DeepMirror uses **zkLogin** to create a self-custodial Sui wallet tied to your Google account. No seed phrases, no private keys to manage—just sign in and trade.
+
+## Understanding zkLogin
+
+zkLogin is Sui's innovative authentication system that combines:
+- **OAuth 2.0** - Familiar Google sign-in flow
+- **Zero-knowledge proofs** - Cryptographic security without exposing credentials
+- **Blockchain addresses** - Deterministic wallet generation from your Google account
+
+### How It Works
+
+1. You sign in with Google
+2. zkLogin generates a zero-knowledge proof of your OAuth token
+3. A unique Sui address is derived from your Google account ID
+4. The bot stores your ephemeral key pair (valid for 7 days)
+5. Transactions are signed using the ephemeral key + ZK proof
+
+<Info>
+  Your wallet address is **deterministic** - signing in with the same Google account always gives you the same address.
+</Info>
+
+## Access Your Wallet
+
+From the main menu, tap **🔐 Wallet** or use the `/wallet` command.
+
+### Wallet Information
+
+The wallet screen shows:
+- **Wallet Address** - Your Sui blockchain address
+- **SUI Balance** - Available SUI for gas fees
+- **DEEP Balance** - DEEP tokens for trading fees
+- **zkLogin Status** - Authentication state (Active/Expired)
+
+## Sign In with zkLogin
+
+### First-Time Setup
+
+1. Tap **🔐 Wallet** from main menu
+2. Select **Sign in with Google**
+3. Click the authentication link sent by the bot
+4. Complete Google OAuth in your browser:
+   - Choose your Google account
+   - Grant permissions
+   - Copy the redirect URL
+5. Paste the redirect URL back in Telegram
+6. Your wallet is created!
+
+<Tip>
+  The OAuth flow opens in your default browser. Make sure you have access to copy the final redirect URL!
+</Tip>
+
+### Session Management
+
+zkLogin sessions expire after **7 days** for security. When expired:
+- You'll see "❌ zkLogin not active" in wallet screen
+- Simply sign in again with the same Google account
+- Your wallet address remains unchanged
+- All positions and settings persist
+
+## Check Your Balance
+
+The wallet screen displays real-time balances:
+
+```
+💼 Your Wallet
+
+Address: 0x1a2b3c4d5e6f...
+SUI Balance: 2.45 SUI
+DEEP Balance: 150.00 DEEP
+
+zkLogin: ✅ Active (expires in 5 days)
+```
+
+### Required Balances
+
+For copy trading, you need:
+
+<CardGroup cols={2}>
+  <Card title="SUI Tokens" icon="gas-pump">
+    **Gas fees** for executing transactions
+    
+    - Minimum: 0.5 SUI
+    - Recommended: 2-5 SUI
+    - Per transaction: ~0.01-0.05 SUI
+  </Card>
+
+  <Card title="DEEP Tokens" icon="coins">
+    **Trading fees** for DeepBook orders
+    
+    - Minimum: 10 DEEP
+    - Recommended: 50-100 DEEP
+    - Discounted fees vs. base tokens
+  </Card>
+</CardGroup>
+
+<Warning>
+  Always maintain sufficient balances. Transactions will fail if you run out of SUI or DEEP!
+</Warning>
+
+## Get Testnet Tokens
+
+DeepMirror operates on Sui Testnet. Here's how to get tokens:
+
+### Get Testnet SUI
+
+1. Join the [Sui Discord](https://discord.gg/sui)
+2. Go to `#testnet-faucet` channel
+3. Send: `!faucet <your-wallet-address>`
+4. Receive 10 SUI instantly
+
+<Card title="Sui Discord Faucet" icon="discord" href="https://discord.com/channels/916379725201563759/971488439931392130">
+  Request testnet SUI tokens
+</Card>
+
+### Get Testnet DEEP
+
+1. Visit [DeepBook Testnet](https://testnet.deepbook.tech)
+2. Connect your wallet
+3. Use the faucet to claim DEEP tokens
+4. Or swap SUI for DEEP on the platform
+
+<Card title="DeepBook Testnet" icon="water" href="https://testnet.deepbook.tech">
+  Get DEEP tokens for trading
+</Card>
+
+## Refresh Balance
+
+Balances update automatically when you open the wallet screen. To manually refresh:
+
+1. Go to **🔐 Wallet**
+2. Tap **↻ Refresh Balance**
+3. Wait 2-3 seconds for on-chain query
+
+## Export Your Wallet (Advanced)
+
+Want full control? You can export your wallet to use in other Sui wallets like Sui Wallet or Suiet.
+
+<Warning>
+  Exporting your private key is an **advanced feature**. Store it securely - anyone with this key controls your funds!
+</Warning>
+
+### How to Export
+
+1. Go to **🔐 Wallet**
+2. Tap **🔑 Export Wallet**
+3. Confirm the security warning
+4. Receive your wallet details:
+   - **Address** - Your public Sui address
+   - **Private Key** - Your secret key (keep safe!)
+   - **Google Account** - Linked OAuth account
+
+5. Import into any Sui wallet using the private key
+
+### After Exporting
+
+You can now:
+- Use your wallet in Sui Wallet browser extension
+- Access it via command-line tools
+- Backup your private key in a password manager
+- Continue using zkLogin in the bot (works independently)
+
+<Note>
+  Even after exporting, zkLogin continues to work. The bot maintains its own ephemeral keys separate from your exported private key.
+</Note>
+
+## Security Best Practices
+
+### DO ✅
+- Keep your Google account secure with 2FA
+- Monitor your balance regularly
+- Sign out when not actively trading
+- Export and backup your wallet if holding significant value
+- Verify transaction details before confirming
+
+### DON'T ❌
+- Share your zkLogin redirect URLs with anyone
+- Use a shared Google account
+- Store large amounts on testnet (it's for testing!)
+- Ignore session expiration warnings
+- Trust unsolicited messages asking for wallet access
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="zkLogin session expired">
+    **Solution:** Sign in with Google again. Your wallet address stays the same, and all positions remain active.
+  </Accordion>
+
+  <Accordion title="Balance shows 0 but I sent tokens">
+    **Solution:**
+    1. Verify the transaction on [Sui Explorer](https://testnet.suivision.xyz/)
+    2. Confirm you sent to the correct address
+    3. Wait 30 seconds and refresh balance
+    4. Check you're on testnet (not mainnet)
+  </Accordion>
+
+  <Accordion title="OAuth redirect not working">
+    **Solution:**
+    1. Make sure you're using a browser (not in-app Telegram browser)
+    2. Copy the **entire** redirect URL including `#`
+    3. Paste back in Telegram within 5 minutes
+    4. If expired, start sign-in process again
+  </Accordion>
+
+  <Accordion title="Can't find my wallet address">
+    **Solution:**
+    1. Go to `/wallet` command
+    2. Your address is displayed at the top
+    3. Tap to copy to clipboard
+    4. Starts with `0x...` (66 characters)
+  </Accordion>
+
+  <Accordion title="Wallet address changed">
+    **Solution:** Wallet addresses are deterministic. If it changed, you likely:
+    - Used a different Google account
+    - Cleared bot data (use `/start` to restore)
+    - Contact support if neither applies
+  </Accordion>
+</AccordionGroup>
+
+## Gas and Fee Management
+
+### Gas Fees (SUI)
+
+Every blockchain transaction requires gas:
+
+| Operation | Typical Cost |
+|-----------|--------------|
+| Placing an order | 0.01-0.03 SUI |
+| Creating position | 0.02-0.05 SUI |
+| Canceling order | 0.01-0.02 SUI |
+| Capability grant | 0.03-0.05 SUI |
+
+<Tip>
+  Keep at least **2 SUI** in your wallet for smooth operation. The bot will warn you when balance is low.
+</Tip>
+
+### Trading Fees (DEEP)
+
+DeepBook V3 charges fees for order placement:
+
+- With DEEP: **0.02%** (discounted)
+- With base tokens: **0.03%** (standard)
+
+DeepMirror **always uses DEEP** for lower fees.
+
+Example:
+- Position size: 10 SUI
+- Fee: 10 × 0.0002 = 0.002 SUI worth of DEEP
+- Approximately: 0.02-0.05 DEEP tokens
+
+## Balance Alerts
+
+DeepMirror sends automatic notifications when:
+
+<CardGroup cols={2}>
+  <Card title="Low SUI" icon="exclamation-triangle">
+    **Below 0.1 SUI**
+    
+    Transaction failures likely. Refill immediately.
+  </Card>
+
+  <Card title="Low DEEP" icon="exclamation-triangle">
+    **Below 5 DEEP**
+    
+    Not enough for trading fees. Get more DEEP.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Setup Copy Trading" icon="copy" href="/bot/copy-trading">
+    Configure makers and position sizing
+  </Card>
+
+  <Card title="Monitor Positions" icon="chart-line" href="/bot/positions">
+    Track your active copy trades
+  </Card>
+
+  <Card title="Understanding Fees" icon="coins" href="/advanced/fees">
+    Deep dive into gas and trading fees
+  </Card>
+</CardGroup>

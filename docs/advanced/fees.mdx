@@ -1,0 +1,465 @@
+---
+title: "Fee Structure"
+description: "Complete breakdown of gas fees and trading fees on DeepMirror"
+---
+
+# Fee Structure
+
+Understanding all costs associated with copy trading on DeepMirror.
+
+## Overview
+
+Copy trading on DeepMirror involves two types of fees:
+
+| Fee Type | Paid To | Paid With | Purpose |
+|----------|---------|-----------|---------|
+| **Gas Fees** | Sui validators | SUI | Execute transactions |
+| **Trading Fees** | DeepBook protocol | DEEP or quote token | Order placement |
+
+<Info>
+  Both fees are **unavoidable** on blockchain. DeepMirror doesn't charge any additional platform fees!
+</Info>
+
+## Gas Fees (SUI)
+
+Gas fees compensate Sui validators for processing your transactions.
+
+### What is Gas?
+
+Every blockchain transaction requires **computational resources**:
+- CPU cycles to execute
+- Storage to record state
+- Network bandwidth to propagate
+
+Validators charge **gas fees** to cover these costs.
+
+### Gas Calculation
+
+```
+Gas Fee = Gas Units × Gas Price
+
+Gas Units: Computation required (varies by transaction)
+Gas Price: Market rate (typically 1,000 MIST per unit)
+```
+
+**1 SUI = 1,000,000,000 MIST**
+
+### Typical Gas Costs
+
+| Operation | Gas Units | Cost (SUI) |
+|-----------|-----------|------------|
+| Place limit order | 10,000-30,000 | 0.01-0.03 |
+| Create position | 20,000-50,000 | 0.02-0.05 |
+| Cancel order | 10,000-20,000 | 0.01-0.02 |
+| Grant capability | 30,000-50,000 | 0.03-0.05 |
+| zkLogin transaction | 40,000-80,000 | 0.04-0.08 |
+
+<Note>
+  Actual costs vary based on network congestion and transaction complexity.
+</Note>
+
+### Example: Opening a Position
+
+```
+Operation: Copy maker's SUI/DBUSDC position
+
+Steps:
+1. Create position record (0.02 SUI)
+2. Place first limit order (0.03 SUI)
+
+Total Gas: ~0.05 SUI
+≈ $0.05 at $1/SUI
+```
+
+### Gas Budget
+
+DeepMirror sets a **gas budget** for each transaction:
+
+```typescript
+const tx = new Transaction();
+tx.setGasBudget(50_000_000); // 0.05 SUI max
+```
+
+**If transaction needs more:**
+- Transaction fails
+- Used gas is **still charged**
+- Position not created
+
+**If transaction needs less:**
+- Only actual gas charged
+- Remainder returned
+
+### Monthly Gas Estimates
+
+For active copy traders:
+
+| Activity Level | Operations/Month | Gas Cost (SUI) |
+|----------------|------------------|----------------|
+| **Light** | 10 positions, 50 orders | 2-3 SUI |
+| **Moderate** | 30 positions, 150 orders | 6-9 SUI |
+| **Heavy** | 100 positions, 500 orders | 20-30 SUI |
+
+<Tip>
+  Keep at least **5 SUI** in your wallet for smooth operation. The bot will warn at 0.5 SUI.
+</Tip>
+
+## Trading Fees (DEEP)
+
+DeepBook charges fees when your orders execute.
+
+### Fee Structure
+
+DeepBook V3 offers **discounted fees** when paying with DEEP tokens:
+
+| Payment Method | Fee Rate | Example (10 SUI @ 1 DBUSDC) |
+|----------------|----------|----------------------------|
+| **DEEP tokens** | 0.02% (2 bps) | 0.002 DBUSDC worth of DEEP |
+| **Base/Quote tokens** | 0.03% (3 bps) | 0.003 DBUSDC |
+
+**Savings with DEEP:**
+```
+Standard fee: 0.003 DBUSDC
+DEEP fee: 0.002 DBUSDC
+Savings: 33% lower fees!
+```
+
+### How DEEP Fees Work
+
+When you place an order:
+
+1. **Order value calculated:**
+   ```
+   10 SUI @ 0.95 DBUSDC = 9.5 DBUSDC
+   ```
+
+2. **Fee computed:**
+   ```
+   9.5 × 0.0002 = 0.0019 DBUSDC worth of fees
+   ```
+
+3. **DEEP equivalent calculated:**
+   ```
+   DEEP/DBUSDC rate: 0.10
+   DEEP needed: 0.0019 / 0.10 = 0.019 DEEP
+   ```
+
+4. **DEEP deducted from balance manager:**
+   ```
+   Before: 100 DEEP
+   After: 99.981 DEEP
+   ```
+
+### Fee On Execution, Not Placement
+
+**Important:** Fees charge only when orders **fill**, not when placed.
+
+```
+Place order: 10 SUI @ 0.95 (no fee yet)
+↓
+Order sits in book for 2 hours
+↓
+Order fills: 10 SUI bought (fee charged now)
+```
+
+**Implications:**
+- Canceled orders = no fee
+- Partially filled = fee on filled portion only
+- Immediate fill = fee right away
+
+### Fee Examples
+
+#### Example 1: Small Position
+
+```
+Position: 5 SUI @ 1.00 DBUSDC
+Value: 5 DBUSDC
+
+With DEEP:
+Fee: 5 × 0.0002 = 0.001 DBUSDC ≈ 0.01 DEEP
+
+With Base Token:
+Fee: 5 × 0.0003 = 0.0015 DBUSDC
+```
+
+**Savings:** 0.0005 DBUSDC per order
+
+#### Example 2: Large Position
+
+```
+Position: 100 SUI @ 0.95 DBUSDC
+Value: 95 DBUSDC
+
+With DEEP:
+Fee: 95 × 0.0002 = 0.019 DBUSDC ≈ 0.19 DEEP
+
+With Base Token:
+Fee: 95 × 0.0003 = 0.0285 DBUSDC
+```
+
+**Savings:** 0.0095 DBUSDC per order
+
+#### Example 3: High-Frequency Copying
+
+```
+Scenario: Maker places 10 orders/day
+Average size: 20 SUI @ 1.00 DBUSDC
+
+Daily fees:
+10 orders × 20 SUI × 1.00 × 0.0002 = 0.04 DBUSDC ≈ 0.4 DEEP
+
+Monthly (30 days):
+0.4 × 30 = 12 DEEP (~$1.20)
+
+Annual:
+12 × 12 = 144 DEEP (~$14.40)
+```
+
+<Warning>
+  High-frequency copying can accumulate significant fees. Monitor your DEEP balance!
+</Warning>
+
+### DEEP Balance Requirements
+
+Recommended DEEP holdings:
+
+| Copy Activity | DEEP Balance | Lasts For |
+|---------------|--------------|-----------|
+| **Testing** | 10 DEEP | ~25 small orders |
+| **Light Use** | 50 DEEP | ~125 orders |
+| **Regular Use** | 100 DEEP | ~250 orders |
+| **Heavy Use** | 500+ DEEP | ~1,250+ orders |
+
+<Tip>
+  Refill DEEP before it drops below **10 tokens**. The bot alerts at 5 DEEP.
+</Tip>
+
+## Total Cost Breakdown
+
+### Per Position Lifecycle
+
+```
+Create Position:
+└─ Gas: 0.02-0.05 SUI
+
+Place Orders (5 orders average):
+├─ Gas per order: 0.01-0.03 SUI
+├─ Total gas: 0.05-0.15 SUI
+└─ Trading fees: 0.05-0.10 DEEP (when filled)
+
+Cancel/Close (if needed):
+└─ Gas: 0.01-0.02 SUI per order
+
+TOTAL PER POSITION:
+Gas: 0.08-0.22 SUI (~$0.08-$0.22)
+Trading Fees: 0.05-0.10 DEEP (~$0.05-$0.10)
+```
+
+### Monthly Estimates
+
+For a moderate user (3 makers, 10% ratio):
+
+```
+Assumptions:
+- 20 new positions/month
+- 5 orders per position average
+- 50% of orders fill
+
+Gas Costs:
+20 × 0.05 SUI (create) = 1 SUI
+100 × 0.02 SUI (place) = 2 SUI
+Total: ~3 SUI/month
+
+Trading Fees:
+50 orders × 0.02 DEEP/order = 1 DEEP/month
+
+TOTAL MONTHLY:
+~3 SUI + 1 DEEP
+≈ $3.10 USD at $1/SUI, $0.10/DEEP
+```
+
+<Info>
+  These are **estimates**. Actual costs depend on: position sizes, maker activity, network gas prices, and DEEP/SUI rates.
+</Info>
+
+## Fee Optimization Strategies
+
+### 1. Use DEEP Tokens
+
+**Always** pay fees with DEEP:
+- ✅ 33% lower trading fees
+- ✅ Supports DeepBook ecosystem
+- ✅ Predictable costs
+
+DeepMirror does this automatically (`payWithDeep: true`).
+
+### 2. Optimal Position Sizing
+
+Larger positions = better fee efficiency:
+
+```
+Scenario A: 10 small positions (1 SUI each)
+Gas: 10 × 0.05 = 0.5 SUI
+Trading fees: 10 × 0.002 = 0.02 DEEP
+Total: 0.5 SUI + 0.02 DEEP
+
+Scenario B: 1 large position (10 SUI)
+Gas: 1 × 0.05 = 0.05 SUI
+Trading fees: 1 × 0.02 = 0.02 DEEP
+Total: 0.05 SUI + 0.02 DEEP
+
+Savings: 0.45 SUI (~90% less gas!)
+```
+
+**Recommendation:** Use higher ratios (25-50%) instead of many small positions (5-10%).
+
+### 3. Batch Operations
+
+Cancel multiple orders in one transaction:
+
+```
+Cancel 5 orders separately:
+5 × 0.02 SUI = 0.1 SUI
+
+Cancel 5 orders together:
+1 × 0.03 SUI = 0.03 SUI
+
+Savings: 0.07 SUI (70%)
+```
+
+<Note>
+  Batch operations coming soon to DeepMirror!
+</Note>
+
+### 4. Filter Low-Value Positions
+
+Set minimum position size to avoid tiny trades:
+
+```
+Without filter:
+Maker opens 0.1 SUI position
+You copy at 10% = 0.01 SUI
+Gas: 0.05 SUI
+Fee efficiency: 0.01 / 0.05 = 20% (bad!)
+
+With filter (min 5 SUI):
+Position ignored, no fees paid
+```
+
+**Coming soon:** Position size filters in settings.
+
+## Fee Transparency
+
+### View Your Fees
+
+Check gas spent:
+
+1. Go to [Sui Explorer](https://testnet.suivision.xyz)
+2. Enter your wallet address
+3. View transaction history
+4. Filter by "Gas Used"
+5. Sum total spent
+
+### DEEP Fee Tracking
+
+Monitor DEEP balance over time:
+
+```
+Feb 1: 100 DEEP
+Feb 7: 87 DEEP
+Used: 13 DEEP in 7 days ≈ 1.86 DEEP/day
+```
+
+**Future feature:** Built-in fee dashboard showing:
+- Total gas spent
+- Total DEEP fees
+- Fee per position
+- Fee trends over time
+
+## Testnet vs. Mainnet Fees
+
+### Testnet (Current)
+
+```
+SUI: Free (from faucet)
+DEEP: Free (from faucet)
+→ No real cost!
+```
+
+**Purpose:** Learn and test without financial risk.
+
+### Mainnet (Future)
+
+```
+SUI: Real money (~$1.00)
+DEEP: Real money (~$0.10)
+→ Actual costs!
+```
+
+**Estimate for moderate user:**
+- Monthly: ~$3-5 USD
+- Annual: ~$36-60 USD
+
+<Info>
+  Mainnet fees are **much cheaper** than Ethereum (10-100x lower) but **more expensive** than Solana.
+</Info>
+
+## FAQs
+
+<AccordionGroup>
+  <Accordion title="Why do I pay gas for failed transactions?">
+    Sui validators already processed your transaction (even though it failed). They spent resources, so they charge gas regardless of outcome.
+    
+    **Minimize failures:**
+    - Keep sufficient balances
+    - Double-check configurations
+    - Test on small amounts first
+  </Accordion>
+
+  <Accordion title="Can I get refunds on fees?">
+    **No.** Gas and trading fees are **non-refundable** once charged. This is standard on all blockchains.
+  </Accordion>
+
+  <Accordion title="What if DEEP price spikes?">
+    Trading fees are calculated in **quote token** (e.g., DBUSDC) then converted to DEEP. If DEEP pumps:
+    
+    - Fewer DEEP tokens needed per fee
+    - Your DEEP balance lasts longer
+    - Effective cost stays same in USD terms
+  </Accordion>
+
+  <Accordion title="Why not use base tokens for fees?">
+    Paying with base/quote tokens costs **50% more** (0.03% vs 0.02%). Over time, this adds up significantly.
+    
+    Example over 1 year:
+    - DEEP fees: $14.40
+    - Base token fees: $21.60
+    - Waste: $7.20 extra
+  </Accordion>
+
+  <Accordion title="Do cancelled orders cost fees?">
+    **Gas: Yes** (0.01-0.02 SUI to cancel)
+    **Trading fees: No** (only charged on execution)
+    
+    Limit your cancellations to save gas!
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Wallet Management" icon="wallet" href="/bot/wallet">
+    Manage SUI and DEEP balances
+  </Card>
+
+  <Card title="DeepBook V3" icon="book" href="/advanced/deepbook-v3">
+    Understand the protocol
+  </Card>
+
+  <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
+    Start copying positions
+  </Card>
+
+  <Card title="Security" icon="shield" href="/advanced/security">
+    Protect your funds
+  </Card>
+</CardGroup>

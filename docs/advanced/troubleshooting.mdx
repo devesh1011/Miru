@@ -1,0 +1,838 @@
+---
+title: "Troubleshooting"
+description: "Common issues and solutions for DeepMirror users"
+---
+
+# Troubleshooting Guide
+
+Solutions to common problems encountered while using DeepMirror.
+
+## Quick Diagnostics
+
+Run through these checks first:
+
+<Steps>
+  <Step title="Check wallet status">
+    ```
+    /wallet
+    ```
+    - ✅ zkLogin active and not expired?
+    - ✅ SUI balance > 0.1?
+    - ✅ DEEP balance > 5?
+  </Step>
+
+  <Step title="Verify copy trading config">
+    ```
+    /copy
+    ```
+    - ✅ Maker address correct?
+    - ✅ Maker activated (not paused)?
+    - ✅ Position ratio configured?
+  </Step>
+
+  <Step title="Check positions">
+    ```
+    /positions
+    ```
+    - ✅ Positions showing expected status?
+    - ✅ Order counts updating?
+  </Step>
+
+  <Step title="Review notifications">
+    - ✅ Any error messages?
+    - ✅ Low balance warnings?
+    - ✅ Failed transaction alerts?
+  </Step>
+</Steps>
+
+If diagnostics pass but issue persists, see specific problems below.
+
+---
+
+## zkLogin Issues
+
+### "zkLogin session expired"
+
+**Symptoms:**
+- Can't place orders
+- Wallet shows "❌ zkLogin not active"
+- Transaction failures
+
+**Cause:** Sessions last 7 days max, yours expired.
+
+**Solution:**
+
+<Steps>
+  <Step title="Re-authenticate">
+    1. Go to `/wallet`
+    2. Tap **Sign in with Google**
+    3. Complete OAuth flow
+    4. Session renewed
+  </Step>
+
+  <Step title="Verify success">
+    Check wallet shows:
+    ```
+    zkLogin: ✅ Active (expires in 7 days)
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Set a reminder to renew sessions every 6 days to avoid expiration mid-trade.
+</Tip>
+
+---
+
+### "OAuth redirect not working"
+
+**Symptoms:**
+- Paste redirect URL but bot says invalid
+- "JWT parsing failed" error
+- Authentication stuck
+
+**Common causes:**
+
+<AccordionGroup>
+  <Accordion title="Using in-app Telegram browser">
+    **Problem:** Telegram's in-app browser doesn't copy full URL.
+    
+    **Solution:**
+    1. Long-press the auth link
+    2. Select **Open in external browser**
+    3. Complete OAuth in Safari/Chrome
+    4. Copy **entire URL** including `#` fragment
+    5. Paste in Telegram
+  </Accordion>
+
+  <Accordion title="Incomplete URL copied">
+    **Problem:** URL is truncated, missing JWT after `#`.
+    
+    **Solution:**
+    Full URL looks like:
+    ```
+    https://authflow.sui.io/#id_token=eyJhbGc...&state=...
+    ```
+    
+    Must include **everything** after `#`. If browser hides it:
+    1. Click address bar
+    2. Select all (Ctrl+A / Cmd+A)
+    3. Copy (Ctrl+C / Cmd+C)
+    4. Paste in Telegram
+  </Accordion>
+
+  <Accordion title="Waited too long">
+    **Problem:** Redirect URLs expire in 5 minutes.
+    
+    **Solution:**
+    1. Start zkLogin process again
+    2. Complete OAuth quickly
+    3. Copy/paste within 5 minutes
+  </Accordion>
+
+  <Accordion title="Wrong Google account">
+    **Problem:** Multiple Google accounts, selected different one.
+    
+    **Solution:**
+    - Use the **same Google account** every time
+    - Create dedicated account for DeepMirror
+    - Check which account you're selecting in OAuth screen
+  </Accordion>
+</AccordionGroup>
+
+---
+
+### "Wallet address changed"
+
+**Symptoms:**
+- Different address than before
+- Positions missing
+- Balance shows zero
+
+**Cause:** Used different Google account or configuration.
+
+**Solution:**
+
+1. **Verify Google account:**
+   - Which account did you use for zkLogin?
+   - Sign in with the **original account**
+
+2. **Check on Explorer:**
+   ```
+   https://testnet.suivision.xyz/account/YOUR_OLD_ADDRESS
+   ```
+   - Funds still there?
+   - Positions still on-chain?
+
+3. **Recover original wallet:**
+   - Sign in with original Google account
+   - Wallet address should reappear
+   - If not, contact support with both addresses
+
+<Warning>
+  zkLogin addresses are **deterministic**. Same Google account always gives same address. If it changed, you used a different account.
+</Warning>
+
+---
+
+## Copy Trading Issues
+
+### "Maker traded but I didn't copy"
+
+**Symptoms:**
+- Maker has new position on DeepBook
+- Your bot didn't create copy position
+- No notification received
+
+**Diagnostics:**
+
+<Steps>
+  <Step title="Check maker status">
+    ```
+    /copy
+    ```
+    Is maker:
+    - ✅ Activated (not paused)?
+    - ✅ Configured with ratio?
+  </Step>
+
+  <Step title="Verify balances">
+    ```
+    /wallet
+    ```
+    Do you have:
+    - ✅ SUI > 0.5?
+    - ✅ DEEP > 5?
+  </Step>
+
+  <Step title="Check capability">
+    ```
+    /wallet > Manage Capabilities
+    ```
+    - ✅ Capability exists and active?
+    - ✅ Not recently revoked?
+  </Step>
+
+  <Step title="Confirm pool">
+    Did maker trade on:
+    - ✅ DeepBook V3? (not V2 or other DEX)
+    - ✅ Supported pool? (SUI/DBUSDC, DEEP/SUI, etc.)
+  </Step>
+</Steps>
+
+**Solutions by cause:**
+
+<AccordionGroup>
+  <Accordion title="Insufficient balance">
+    **Error:** "Insufficient SUI balance" or "Insufficient DEEP balance"
+    
+    **Fix:**
+    1. Go to testnet faucets
+    2. Get more SUI and DEEP
+    3. Verify balance updated with `/wallet`
+    4. Next maker trade will copy
+  </Accordion>
+
+  <Accordion title="Capability missing">
+    **Error:** "No active capability"
+    
+    **Fix:**
+    1. `/wallet` > **Manage Capabilities**
+    2. Tap **Grant Capability**
+    3. Approve transaction
+    4. Verify capability created
+  </Accordion>
+
+  <Accordion title="zkLogin expired">
+    **Error:** "zkLogin session expired"
+    
+    **Fix:**
+    1. `/wallet` > **Sign in with Google**
+    2. Complete OAuth
+    3. Session renewed
+  </Accordion>
+
+  <Accordion title="Maker not activated">
+    **Error:** Maker shows "⏸️ Paused" or "❌ Inactive"
+    
+    **Fix:**
+    1. `/copy`
+    2. Select maker
+    3. Tap **✅ Activate**
+    4. Confirm activation
+  </Accordion>
+
+  <Accordion title="Wrong pool">
+    **Cause:** Maker traded on unsupported pool or different DEX
+    
+    **Fix:**
+    - DeepMirror only copies **DeepBook V3** trades
+    - Check maker's transaction on Explorer
+    - Ensure it's a `deepbook::place_limit_order` call
+  </Accordion>
+</AccordionGroup>
+
+---
+
+### "Position stuck in Monitoring"
+
+**Symptoms:**
+- Position created
+- Order count stays at 0
+- Status: "Monitoring 🔍"
+- Hours have passed
+
+**Explanation:** Position is waiting for maker to place their first order.
+
+**Solutions:**
+
+<AccordionGroup>
+  <Accordion title="Maker hasn't placed orders yet">
+    **This is normal behavior.**
+    
+    - Maker created position but didn't place orders
+    - Position will activate when maker places first order
+    - Can take hours or days
+    
+    **Action:** Wait or close position if tired of waiting.
+  </Accordion>
+
+  <Accordion title="Maker already has orders (detection failed)">
+    **Cause:** Bot missed maker's initial order (rare).
+    
+    **Fix:**
+    1. `/positions`
+    2. Select stuck position
+    3. Tap **↻ Refresh**
+    4. If still 0, close and let bot create new position on next maker order
+  </Accordion>
+
+  <Accordion title="Pool doesn't exist">
+    **Cause:** Maker's pool address invalid.
+    
+    **Fix:**
+    1. Check pool on [DeepBook Testnet](https://testnet.deepbook.tech)
+    2. If pool not found, close position
+    3. Contact support with pool address
+  </Accordion>
+</AccordionGroup>
+
+---
+
+### "Order count not updating"
+
+**Symptoms:**
+- Position shows 3 orders
+- Maker placed 2 more orders
+- Your order count still shows 3
+
+**Cause:** Order count syncs every 30 seconds. May be delayed.
+
+**Solutions:**
+
+1. **Manual refresh:**
+   ```
+   /positions > Select position > ↻ Refresh
+   ```
+
+2. **Wait 1 minute:**
+   - Auto-sync may be in progress
+   - Check again in 60 seconds
+
+3. **Verify maker actually placed orders:**
+   - Check maker address on [Sui Explorer](https://testnet.suivision.xyz)
+   - Filter for recent DeepBook transactions
+   - Confirm orders exist on-chain
+
+4. **Check bot status:**
+   - If bot is restarting, syncs pause
+   - Positions saved, will resume after restart
+
+---
+
+## Position Management Issues
+
+### "Can't close position"
+
+**Symptoms:**
+- Tap "Close Position"
+- Transaction fails
+- Error message appears
+
+**Diagnostics:**
+
+<AccordionGroup>
+  <Accordion title="Insufficient gas">
+    **Error:** "Insufficient gas balance"
+    
+    **Fix:**
+    1. `/wallet` shows SUI < 0.05
+    2. Get more testnet SUI from faucet
+    3. Retry close
+    
+    **Cost to close:** ~0.02-0.05 SUI
+  </Accordion>
+
+  <Accordion title="zkLogin expired">
+    **Error:** "zkLogin session expired"
+    
+    **Fix:**
+    1. `/wallet` > **Sign in with Google**
+    2. Renew session
+    3. Try closing again
+  </Accordion>
+
+  <Accordion title="Orders already closed">
+    **Error:** "No orders to cancel"
+    
+    **Explanation:** Orders already filled or canceled.
+    
+    **Fix:**
+    1. `/positions` > **↻ Refresh**
+    2. Position should show as closed
+    3. If not, contact support with position ID
+  </Accordion>
+
+  <Accordion title="Network congestion">
+    **Error:** "Transaction timeout"
+    
+    **Fix:**
+    1. Wait 30 seconds
+    2. Try again
+    3. If persists, network may be overloaded (rare on testnet)
+    4. Wait 5-10 minutes and retry
+  </Accordion>
+</AccordionGroup>
+
+---
+
+### "Position shows wrong order count"
+
+**Symptoms:**
+- Your position: 5 orders
+- But checking DeepBook Explorer: only 3 orders
+
+**Cause:** Database and blockchain out of sync.
+
+**Solution:**
+
+1. **Force refresh:**
+   ```
+   /positions > Select position > ↻ Refresh
+   ```
+
+2. **Manually verify on Explorer:**
+   ```
+   https://testnet.deepbook.tech
+   Connect wallet > View positions
+   ```
+
+3. **If mismatch persists:**
+   - Take screenshots of bot vs Explorer
+   - Note position ID
+   - Report to support
+
+<Note>
+  Order counts are **eventually consistent**. Small delays (< 1 min) are normal.
+</Note>
+
+---
+
+## Wallet Issues
+
+### "Balance shows 0 but I sent tokens"
+
+**Symptoms:**
+- Sent SUI/DEEP to wallet address
+- `/wallet` still shows 0 balance
+
+**Diagnostics:**
+
+<Steps>
+  <Step title="Verify transaction on Explorer">
+    1. Go to [Sui Testnet Explorer](https://testnet.suivision.xyz)
+    2. Enter your wallet address
+    3. Check recent transactions
+    4. Confirm tokens arrived
+  </Step>
+
+  <Step title="Check correct network">
+    - DeepMirror uses **Testnet**
+    - Did you send on Mainnet by mistake?
+    - Testnet and Mainnet are separate!
+  </Step>
+
+  <Step title="Verify address">
+    - Did you copy **entire address**?
+    - Addresses start with `0x` (66 chars total)
+    - Check for typos
+  </Step>
+
+  <Step title="Refresh balance">
+    ```
+    /wallet > ↻ Refresh Balance
+    ```
+    Wait 5 seconds for on-chain query.
+  </Step>
+</Steps>
+
+**Solutions:**
+
+<AccordionGroup>
+  <Accordion title="Sent to wrong address">
+    **Problem:** Typo or copied wrong address.
+    
+    **Fix:**
+    - Check transaction on Explorer
+    - See which address received tokens
+    - If it's not yours, tokens are **lost** (testnet, so no big deal)
+    - Double-check address next time
+  </Accordion>
+
+  <Accordion title="Sent on wrong network">
+    **Problem:** Sent on Mainnet, bot uses Testnet.
+    
+    **Fix:**
+    - Testnet and Mainnet addresses are the same format but separate networks
+    - Tokens sent on Mainnet won't appear on Testnet
+    - Use correct faucet for testnet tokens
+  </Accordion>
+
+  <Accordion title="Transaction pending">
+    **Problem:** Transaction not yet confirmed.
+    
+    **Fix:**
+    - Sui is fast (2-3 seconds usually)
+    - If > 1 minute, check Explorer for transaction status
+    - May have failed for some reason
+  </Accordion>
+
+  <Accordion title="Cache issue">
+    **Problem:** Bot's cache not updated.
+    
+    **Fix:**
+    1. Tap **↻ Refresh Balance** multiple times
+    2. Wait 30 seconds between refreshes
+    3. If still wrong, restart Telegram app
+    4. Re-check `/wallet`
+  </Accordion>
+</AccordionGroup>
+
+---
+
+### "Capability not working"
+
+**Symptoms:**
+- Granted capability
+- Bot still says "No capability"
+- Can't activate copy trading
+
+**Solution:**
+
+1. **Verify on-chain:**
+   ```
+   https://testnet.suivision.xyz/account/YOUR_ADDRESS/objects
+   ```
+   Look for capability object (type: `Capability`)
+
+2. **Check in bot:**
+   ```
+   /wallet > Manage Capabilities
+   ```
+   Should show active capability
+
+3. **If missing:**
+   - Capability grant transaction may have failed
+   - Check gas balance was sufficient
+   - Retry granting capability
+
+4. **If shows in bot but doesn't work:**
+   - Revoke capability
+   - Grant new capability
+   - Verify it works
+
+---
+
+## Bot Issues
+
+### "Bot not responding"
+
+**Symptoms:**
+- Commands don't work
+- No replies from bot
+- Buttons don't respond
+
+**Solutions:**
+
+<Steps>
+  <Step title="Check bot status">
+    - Is bot online? (green dot by name)
+    - If offline, bot may be restarting
+    - Wait 2-3 minutes
+  </Step>
+
+  <Step title="Restart Telegram">
+    1. Close Telegram app completely
+    2. Clear from recent apps
+    3. Reopen Telegram
+    4. Try command again
+  </Step>
+
+  <Step title="Reset conversation">
+    ```
+    /start
+    ```
+    Fresh menu should appear.
+  </Step>
+
+  <Step title="Check announcements">
+    - Visit [community channel](https://t.me/deepmirror_community)
+    - Bot maintenance scheduled?
+    - Known issues?
+  </Step>
+</Steps>
+
+If bot remains unresponsive for > 30 minutes, check status page or contact support.
+
+---
+
+### "Buttons expired / not working"
+
+**Symptoms:**
+- Tap button, nothing happens
+- "Message is too old" error
+
+**Cause:** Message buttons expire after 48 hours.
+
+**Solution:**
+
+```
+/start
+```
+
+Get fresh menu with working buttons.
+
+<Tip>
+  Always use latest menu. Old messages won't work.
+</Tip>
+
+---
+
+### "Notifications not arriving"
+
+**Symptoms:**
+- Copy trades happening but no Telegram messages
+- Missing low balance warnings
+
+**Solution:**
+
+1. **Check notification settings:**
+   ```
+   /settings > Notifications
+   ```
+   Ensure all desired alerts are **enabled** (✅)
+
+2. **Verify Telegram notifications:**
+   - Telegram app notifications enabled on phone?
+   - DeepMirror bot not muted?
+   - Do Not Disturb mode off?
+
+3. **Test notification:**
+   - Create small test position
+   - Should receive confirmation
+   - If not, notification system issue
+
+4. **Re-enable notifications:**
+   ```
+   /settings > Notifications > Disable All > Enable All
+   ```
+   Reset notification state.
+
+---
+
+## Transaction Failures
+
+### "Transaction failed: Insufficient funds"
+
+**Symptoms:**
+- Transaction submitted
+- Error: "Insufficient balance for gas"
+
+**Solution:**
+
+1. **Check SUI balance:**
+   ```
+   /wallet
+   ```
+   Need at least 0.1 SUI
+
+2. **Get more SUI:**
+   - [Sui Discord Faucet](https://discord.com/channels/916379725201563759/971488439931392130)
+   - Request with `!faucet YOUR_ADDRESS`
+
+3. **Retry transaction**
+
+---
+
+### "Transaction failed: Gas budget exceeded"
+
+**Symptoms:**
+- Complex transaction
+- "Gas budget exceeded" error
+- Some gas still deducted
+
+**Cause:** Transaction needed more gas than budgeted.
+
+**Solution:**
+
+1. **Not your fault** - Bot sets gas budget
+2. **Retry** - May succeed on second try (network variance)
+3. **If persists** - Report to support with transaction hash
+
+---
+
+### "Transaction failed: Nonce invalid"
+
+**Symptoms:**
+- "Invalid nonce" or "Nonce mismatch"
+- Transaction rejected
+
+**Cause:** Order nonce out of sync.
+
+**Solution:**
+
+1. **Wait 30 seconds** - Nonce will sync
+2. **Retry transaction**
+3. **If persists:**
+   - May need to reset nonce (contact support)
+   - Temporary blockchain issue
+
+---
+
+## Performance Issues
+
+### "Slow order execution"
+
+**Symptoms:**
+- Maker places order
+- Your copy delay > 5 seconds
+
+**Causes & Solutions:**
+
+<AccordionGroup>
+  <Accordion title="Normal latency">
+    **Typical delay:** 500ms - 2 seconds
+    
+    - Transaction detection: 200-500ms
+    - Position creation: 100-300ms
+    - Order placement: 200-1000ms
+    - Total: 500-1800ms
+    
+    **This is expected.**
+  </Accordion>
+
+  <Accordion title="Network congestion">
+    **Delay:** 3-10 seconds
+    
+    - Sui testnet occasionally slow
+    - High transaction volume period
+    - Nothing you can do
+    - Usually resolves quickly
+  </Accordion>
+
+  <Accordion title="Bot overload">
+    **Delay:** 10+ seconds
+    
+    - Many users copying same maker simultaneously
+    - Bot processing queue
+    - Rare on testnet, possible on mainnet
+    - Team monitors and scales
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+  **Sub-second execution** is ideal but not always possible. 1-2 second delays are normal and acceptable.
+</Info>
+
+---
+
+## Getting Help
+
+### Still stuck?
+
+If this guide didn't solve your issue:
+
+<CardGroup cols={2}>
+  <Card title="Community Support" icon="telegram" href="https://t.me/deepmirror_community">
+    Ask in Telegram community
+  </Card>
+
+  <Card title="Report Bug" icon="bug" href="https://github.com/yourusername/deepmirror/issues">
+    File bug report on GitHub
+  </Card>
+
+  <Card title="Email Support" icon="envelope" href="mailto:support@deepmirror.xyz">
+    Email support team
+  </Card>
+
+  <Card title="Documentation" icon="book" href="/introduction">
+    Re-read docs for clarity
+  </Card>
+</CardGroup>
+
+### When reporting issues, include:
+
+- ✅ Your wallet address (0x...)
+- ✅ Transaction hash (if applicable)
+- ✅ Screenshots of error
+- ✅ Steps to reproduce
+- ✅ What you expected vs what happened
+- ❌ **Never** share private keys or redirect URLs
+
+---
+
+## Preventive Measures
+
+Avoid issues before they happen:
+
+<Steps>
+  <Step title="Maintain balances">
+    - Keep SUI > 2
+    - Keep DEEP > 50
+    - Set low balance alerts
+  </Step>
+
+  <Step title="Renew sessions proactively">
+    - Renew zkLogin every 6 days
+    - Don't wait for expiration
+    - Set calendar reminder
+  </Step>
+
+  <Step title="Monitor daily">
+    - Check `/positions` once per day
+    - Review `/wallet` balances
+    - Read all notifications
+  </Step>
+
+  <Step title="Stay updated">
+    - Join [community channel](https://t.me/deepmirror_community)
+    - Follow announcements
+    - Update bot when released
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Security Guide" icon="shield" href="/advanced/security">
+    Protect your wallet
+  </Card>
+
+  <Card title="Bot Commands" icon="terminal" href="/bot/commands">
+    Full command reference
+  </Card>
+
+  <Card title="Copy Trading" icon="copy" href="/bot/copy-trading">
+    Master copy trading
+  </Card>
+</CardGroup>
