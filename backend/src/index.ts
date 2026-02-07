@@ -53,7 +53,7 @@ async function main() {
 
   // ── Step 2: Database ───────────────────────
   try {
-    initializeDatabase();
+    await initializeDatabase();
   } catch (error) {
     console.error("❌ Database init failed:", error);
     process.exit(1);
@@ -79,7 +79,7 @@ async function main() {
 
   // ── Step 4: Restore positions from DB ──────
   try {
-    const activePositions = positionRepo.getAllActive();
+    const activePositions = await positionRepo.getAllActive();
     if (activePositions.length > 0) {
       console.log(
         `\n🔄 Restoring ${activePositions.length} active position(s)...`,
